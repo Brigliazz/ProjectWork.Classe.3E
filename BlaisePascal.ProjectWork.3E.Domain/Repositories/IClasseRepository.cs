@@ -4,15 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BlaisePascal.ProjectWork._3E.Domain.Objects.Studente
+namespace BlaisePascal.ProjectWork._3E.Domain.Repositories
 {
-    public class Studente
+    internal interface IClasseRepository
     {
-
-
-
-
-
-
     }
 }

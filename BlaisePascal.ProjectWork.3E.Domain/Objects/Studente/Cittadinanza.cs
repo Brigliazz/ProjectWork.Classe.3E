@@ -6,13 +6,7 @@ using System.Threading.Tasks;
 
 namespace BlaisePascal.ProjectWork._3E.Domain.Objects.Studente
 {
-    public class Studente
+    internal class Cittadinanza
     {
-
-
-
-
-
-
     }
 }

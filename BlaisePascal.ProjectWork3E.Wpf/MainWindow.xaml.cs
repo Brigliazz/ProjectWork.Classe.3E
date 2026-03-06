@@ -8,9 +8,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using System.Security.Cryptography.X509Certificates;
 
-namespace BlaisePscal.ProjectWork._3E.Wpf
+namespace BlaisePascal.ProjectWork3E.Wpf
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml

@@ -1,2 +1,8 @@
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+﻿class Program
+{
+    static void Main(string[] args)
+    {
+        // Devi sempre creare prima le tabelle dei genitori, scuole e scelte dopo Studenti, così le FK non falliscono. (per i database, se non capite chiedete a ruscelli)
+    }
+}
+

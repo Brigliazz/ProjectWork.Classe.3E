@@ -12,4 +12,9 @@
     <ProjectReference Include="..\BlaisePascal.ProjectWork.3E.Domain\BlaisePascal.ProjectWork.3E.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3" />
+    <PackageReference Include="System.Data.SQLite" Version="2.0.2" />
+  </ItemGroup>
+
 </Project>

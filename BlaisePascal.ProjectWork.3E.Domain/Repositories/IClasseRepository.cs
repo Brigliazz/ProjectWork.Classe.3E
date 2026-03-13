@@ -1,12 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima;
 
 namespace BlaisePascal.ProjectWork._3E.Domain.Repositories
 {
-    internal interface IClasseRepository
+    public interface IClasseRepository
     {
+        Task<ClassePrima?> GetByIdAsync(Guid id);
+        Task<List<ClassePrima>> GetAllAsync();
+        Task<ClassePrima?> GetBySezioneAsync(string sezione);
+        Task AddAsync(ClassePrima classe);
+        Task UpdateAsync(ClassePrima classe);
+        Task SaveChangesAsync();
     }
 }

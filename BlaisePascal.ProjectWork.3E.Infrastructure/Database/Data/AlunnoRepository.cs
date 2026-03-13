@@ -1,4 +1,4 @@
-﻿using BlaisePascal.ProjectWork._3E.Domain.Objects.Studente;
+using BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente;
 using Microsoft.Data.Sqlite;
 using System.Collections.Generic;
 // servità mettere lo using

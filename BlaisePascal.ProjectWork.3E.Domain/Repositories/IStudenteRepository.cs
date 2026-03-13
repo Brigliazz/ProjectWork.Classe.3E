@@ -1,12 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente;
 
 namespace BlaisePascal.ProjectWork._3E.Domain.Repositories
 {
-    internal interface IStudenteRepository
+    public interface IStudenteRepository
     {
+        Task<Studente?> GetByIdAsync(Guid id);
+        Task<List<Studente>> GetNonAssegnatiAsync();
+        Task<List<Studente>> GetAllAsync();
+        Task AddAsync(Studente studente);
+        Task UpdateAsync(Studente studente);
+        Task SaveChangesAsync();
     }
 }

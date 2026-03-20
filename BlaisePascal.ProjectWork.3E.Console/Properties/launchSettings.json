@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "BlaisePascal.ProjectWork.3E.Console": {
+      "commandName": "Project"
+    },
+    "WSL": {
+      "commandName": "WSL2",
+      "distributionName": ""
+    }
+  }
+}

@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BlaisePascal.ProjectWork.3E.Domain\BlaisePascal.ProjectWork.3E.Domain.csproj" />
+    <ProjectReference Include="..\BlaisePascal.ProjectWork.3E.Infrastructure\BlaisePascal.ProjectWork.3E.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

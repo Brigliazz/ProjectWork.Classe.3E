@@ -74,5 +74,35 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
             _studentiIds.Add(studente.Id);
             studente.AssegnaAClasse(Id);
         }
+
+        /// <summary>
+        /// Rimuove uno studente dalla classe (usato per swap in F3).
+        /// </summary>
+        public void RimuoviStudente(Studente.Studente studente)
+        {
+            if (!_studentiIds.Remove(studente.Id))
+                throw new DomainException(
+                    $"Lo studente {studente.Nome} {studente.Cognome} non appartiene alla classe {Sezione.Valore}.");
+
+            studente.RimuoviDaClasse();
+
+            // Se lo studente rimosso aveva una disabilità, aggiorna il flag
+            if (studente.ProfiloBES.HasDisabilita)
+                HasStudenteConDisabilita = false;
+        }
+
+        /// <summary>
+        /// Posti liberi rimanenti nella classe.
+        /// </summary>
+        public int CapienzaResidua
+        {
+            get
+            {
+                int limite = HasStudenteConDisabilita
+                    ? MaxStudentiConDisabilita
+                    : MaxStudentiSenzaDisabilita;
+                return limite - NumeroStudenti;
+            }
+        }
     }
 }

@@ -48,7 +48,7 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBox x:Name="TxtFilePath" IsReadOnly="True" Padding="8" Background="#fafafa" BorderBrush="#ccc" BorderThickness="2" />
-                        <Button Grid.Column="1" Content="Sfoglia..." Width="80" Margin="5,0,0,0" Style="{StaticResource PrimaryButton}" />
+                        <Button x:Name="BtnBrowse" Grid.Column="1" Content="Sfoglia..." Width="80" Margin="5,0,0,0" Style="{StaticResource PrimaryButton}" Click="BtnBrowse_Click" />
                     </Grid>
                 </StackPanel>
 

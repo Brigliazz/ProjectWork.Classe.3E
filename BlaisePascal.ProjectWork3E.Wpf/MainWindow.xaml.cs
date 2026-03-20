@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Microsoft.Win32;
 
 namespace BlaisePascal.ProjectWork3E.Wpf
 {
@@ -19,6 +20,16 @@ namespace BlaisePascal.ProjectWork3E.Wpf
         public MainWindow()
         {
             InitializeComponent();
+        }
+
+        private void BtnBrowse_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Filter = "File Excel (*.xlsx;*.xls)|*.xlsx;*.xls|Tutti i file (*.*)|*.*";
+            if (openFileDialog.ShowDialog() == true)
+            {
+                TxtFilePath.Text = openFileDialog.FileName;
+            }
         }
     }
 }

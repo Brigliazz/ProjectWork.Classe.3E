@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -17,6 +17,8 @@ namespace BlaisePascal.ProjectWork3E.Wpf
     /// </summary>
     public partial class MainWindow : Window
     {
+        private string importedFilePath = string.Empty;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -30,6 +32,19 @@ namespace BlaisePascal.ProjectWork3E.Wpf
             {
                 TxtFilePath.Text = openFileDialog.FileName;
             }
+        }
+
+        private void BtnImport_Click(object sender, RoutedEventArgs e)
+        {
+            importedFilePath = TxtFilePath.Text;
+
+            if (string.IsNullOrWhiteSpace(importedFilePath))
+            {
+                MessageBox.Show("Seleziona prima un file Excel usando il tasto 'Sfoglia file'.", "Attenzione", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            MessageBox.Show($"Percorso file copiato con successo nella variabile!\n\nPercorso: {importedFilePath}", "Verifica Importazione", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 }

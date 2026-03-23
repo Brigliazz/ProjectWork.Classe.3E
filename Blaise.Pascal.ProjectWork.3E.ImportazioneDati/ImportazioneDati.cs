@@ -134,7 +134,7 @@ namespace Importazione_Dati_Excel
                 Console.WriteLine($"              Telefono: {VerificaDato(g.Numero, "Nessun numero fornito")}");
                 Console.WriteLine($"              Mail: {VerificaDato(g.Mail, "Email mancante")}");
 
-                Console.WriteLine("--------------------------------------------------\n");
+                Console.WriteLine("--------------------------------------------------\n"); /
             }
             */
 

@@ -1,4 +1,5 @@
-﻿using ExcelDataReader;
+﻿using Blaise.Pascal.ProjectWork._3E.ImportazioneDati;
+using ExcelDataReader;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -18,6 +19,7 @@ namespace Importazione_Dati_Excel
             List<Scelta> listaScelte = new List<Scelta>();
             List<ScuolaProv> listaScuole = new List<ScuolaProv>();
             List<Genitore> listaGenitori = new List<Genitore>();
+            List<PreferenzaCompagno> listaPreferenzeCompagni = new List<PreferenzaCompagno>();
 
 
             // per il percorso file bisogna fare in modo che dalla WPF (sfoglia file) venga messo il percorso nella varibaile percorsoFIle
@@ -58,6 +60,8 @@ namespace Importazione_Dati_Excel
                 int idxCognomeGenitore2 = TrovaIndiceColonna(table, "CognomeSecondoGen");
                 int idxMailGenitore2 = TrovaIndiceColonna(table, "EmailSecondoGen");
 
+                int idxPrefCompagno = TrovaIndiceColonna(table, "Ulteriore dato: Scelta compagno/a", "Scelta compagno/a");
+
 
                 // 2. LEGGIAMO I DATI
                 for (int i = 1; i < table.Rows.Count; i++) // Salto riga 0 (intestazioni)
@@ -94,6 +98,7 @@ namespace Importazione_Dati_Excel
                     listaScelte.Add(new Scelta { IndirizzoScelto = EstraiDato(row, idxIndirizzoScelto) });
                     listaScuole.Add(new ScuolaProv { CodiceScuola = EstraiDato(row, idxCodScuola), DenominazioneScuola = EstraiDato(row, idxNomeScuola) });
                     listaGenitori.Add(new Genitore { Numero = EstraiDato(row, idxTelGenitore2), Nome = EstraiDato(row, idxNomeGenitore2), Mail = EstraiDato(row, idxMailGenitore2) });
+                    listaPreferenzeCompagni.Add(new PreferenzaCompagno { NomeStudenteScelto = EstraiDato(row, idxPrefCompagno) });
                 }
             }
 

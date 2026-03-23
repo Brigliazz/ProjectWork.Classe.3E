@@ -9,7 +9,7 @@ namespace Importazione_Dati_Excel
 {
     class ImportazioneDati
     {
-        string percorsoFile = "C:\\Users\\pietro.mannu\\Alunni.xlsx";
+        string percorsoFile;
         public void EstrapolaDati()
         {
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);

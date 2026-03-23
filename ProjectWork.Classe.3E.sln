@@ -21,7 +21,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlaisePascal.ProjectWork.3E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlaisePascal.ProjectWork3E.Wpf", "BlaisePascal.ProjectWork3E.Wpf\BlaisePascal.ProjectWork3E.Wpf.csproj", "{059247F3-C7CD-4D1A-B1AD-AD639CE0E32B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Blaise.Pascal.ProjectWork.3E.ImportazioneDati", "Blaise.Pascal.ProjectWork.3E.ImportazioneDati\Blaise.Pascal.ProjectWork.3E.ImportazioneDati.csproj", "{AD2F0640-CF20-4DD1-9576-672D5413CBDC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlaisePascal.ProjectWork.3E.ImportazioneDati", "Blaise.Pascal.ProjectWork.3E.ImportazioneDati\BlaisePascal.ProjectWork.3E.ImportazioneDati.csproj", "{AD2F0640-CF20-4DD1-9576-672D5413CBDC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -9,6 +9,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Microsoft.Win32;
+using BlaisePascal.ProjectWork._3E.Domain.Services;
 
 namespace BlaisePascal.ProjectWork3E.Wpf
 {
@@ -17,7 +18,7 @@ namespace BlaisePascal.ProjectWork3E.Wpf
     /// </summary>
     public partial class MainWindow : Window
     {
-        private string importedFilePath = string.Empty;
+        public static string percorsoDati = string.Empty;
 
         public MainWindow()
         {
@@ -36,15 +37,26 @@ namespace BlaisePascal.ProjectWork3E.Wpf
 
         private void BtnImport_Click(object sender, RoutedEventArgs e)
         {
-            importedFilePath = TxtFilePath.Text;
+            percorsoDati = TxtFilePath.Text;
 
-            if (string.IsNullOrWhiteSpace(importedFilePath))
+            if (string.IsNullOrWhiteSpace(percorsoDati))
             {
                 MessageBox.Show("Seleziona prima un file Excel usando il tasto 'Sfoglia file'.", "Attenzione", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            MessageBox.Show($"Percorso file copiato con successo nella variabile!\n\nPercorso: {importedFilePath}", "Verifica Importazione", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (!int.TryParse(TxtNumeroClassi.Text, out int nClassi) || nClassi <= 0)
+            {
+                MessageBox.Show("Per favore inserisci un numero di classi valido (es. 1, 2, 3...).", "Attenzione", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Assegna la variabile nel Domain Service
+            BlaisePascal.ProjectWork.ImportazioneDati.percorsoFile = percorsoDati;
+
+            MessageBox.Show($"File ed impostazioni acquisiti con successo!\n\nPercorso: {percorsoDati}\nNumero Classi impostato a: {BlaisePascal.ProjectWork._3E.Domain.Services.DistribuzioneClassiService.NumClassi}", "Verifica Importazione", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+
+
     }
 }

@@ -8,6 +8,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
 {
     public class DistribuzioneClassiService
     {
+
         private readonly IStudenteRepository _studenteRepository;
         private readonly IClasseRepository _classeRepository;
 

@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlaisePascal.ProjectWork3E.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlaisePascal.ProjectWork.3E.ImportazioneDati", "Blaise.Pascal.ProjectWork.3E.ImportazioneDati\BlaisePascal.ProjectWork.3E.ImportazioneDati.csproj", "{AD2F0640-CF20-4DD1-9576-672D5413CBDC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Blaise.Pascal.ProjectWork.3E.EsportazioneDati", "Blaise.Pascal.ProjectWork.3E.EsportazioneDati\Blaise.Pascal.ProjectWork.3E.EsportazioneDati.csproj", "{858486FC-2DA1-422C-92B1-052E6108F1F1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,6 +59,10 @@ Global
 		{AD2F0640-CF20-4DD1-9576-672D5413CBDC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AD2F0640-CF20-4DD1-9576-672D5413CBDC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AD2F0640-CF20-4DD1-9576-672D5413CBDC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{858486FC-2DA1-422C-92B1-052E6108F1F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{858486FC-2DA1-422C-92B1-052E6108F1F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{858486FC-2DA1-422C-92B1-052E6108F1F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{858486FC-2DA1-422C-92B1-052E6108F1F1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -68,6 +74,7 @@ Global
 		{84AA3929-7F8F-40F8-8674-FEAA39C351D0} = {56D8FD9E-6CCF-4270-9503-41CFB63800BE}
 		{D128907F-594E-4319-8D85-4BA462424BC0} = {56D8FD9E-6CCF-4270-9503-41CFB63800BE}
 		{AD2F0640-CF20-4DD1-9576-672D5413CBDC} = {56D8FD9E-6CCF-4270-9503-41CFB63800BE}
+		{858486FC-2DA1-422C-92B1-052E6108F1F1} = {56D8FD9E-6CCF-4270-9503-41CFB63800BE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F2C3A250-4072-4C3C-AA2C-F9C93DF1D602}

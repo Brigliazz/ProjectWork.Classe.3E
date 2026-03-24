@@ -19,9 +19,8 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
         public int NumeroStudenti => _studentiIds.Count;
         public bool HasStudenteConDisabilita { get; private set; }
 
-        // Costanti P1
-        private const int MaxStudentiSenzaDisabilita = 27;
-        private const int MaxStudentiConDisabilita = 20;
+        // I limiti P1 (es. 27, 20) sono ora dinamicizzati tramite OpzioniDistribuzione
+        // passate come parametro ai metodi del dominio.
         private const int MaxStudentiConDisabilitaPerClasse = 1;
 
         // Costruttore EF Core
@@ -45,8 +44,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
             return new ClassePrima(Guid.NewGuid(), sezione, indirizzo);
         }
 
-        
-        public void AggiungiStudente(Studente.Studente studente)
+        public void AggiungiStudente(Studente.Studente studente, BlaisePascal.ProjectWork._3E.Domain.Services.OpzioniDistribuzione opzioni)
         {
             // Invariante P1: max 1 studente con disabilità per classe
             if (studente.ProfiloBES.HasDisabilita)
@@ -55,20 +53,22 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
                     throw new DomainException(
                         $"La classe {Sezione.Valore} ha già uno studente con disabilità. Max {MaxStudentiConDisabilitaPerClasse} per classe.");
 
-                // Se aggiungiamo un disabile, il limite scende a 20
-                if (NumeroStudenti >= MaxStudentiConDisabilita)
+                if (!opzioni.ConsentiSforo && NumeroStudenti >= opzioni.LimiteDisabili)
                     throw new DomainException(
-                        $"La classe {Sezione.Valore} ha già {NumeroStudenti} studenti. Con uno studente con disabilità il massimo è {MaxStudentiConDisabilita}.");
+                        $"La classe {Sezione.Valore} ha già {NumeroStudenti} studenti. Con uno studente con disabilità il massimo è {opzioni.LimiteDisabili}.");
 
                 HasStudenteConDisabilita = true;
             }
             else
             {
-                // Controlla il limite corretto in base alla presenza di studenti con disabilità
-                int limite = HasStudenteConDisabilita ? MaxStudentiConDisabilita : MaxStudentiSenzaDisabilita;
-                if (NumeroStudenti >= limite)
-                    throw new DomainException(
-                        $"La classe {Sezione.Valore} ha raggiunto il limite di {limite} studenti.");
+                // Controlla il limite corretto se non siamo in modalità sforo
+                if (!opzioni.ConsentiSforo)
+                {
+                    int limite = HasStudenteConDisabilita ? opzioni.LimiteDisabili : opzioni.LimiteStandard;
+                    if (NumeroStudenti >= limite)
+                        throw new DomainException(
+                            $"La classe {Sezione.Valore} ha raggiunto il limite di {limite} studenti.");
+                }
             }
 
             _studentiIds.Add(studente.Id);
@@ -92,17 +92,23 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
         }
 
         /// <summary>
-        /// Posti liberi rimanenti nella classe.
+        /// Posti liberi rimanenti nella classe. Accetta OpzioniDistribuzione per gestire lo sforo.
         /// </summary>
-        public int CapienzaResidua
+        public int OttieniCapienzaResidua(BlaisePascal.ProjectWork._3E.Domain.Services.OpzioniDistribuzione opzioni)
         {
-            get
+            int limite = HasStudenteConDisabilita
+                ? opzioni.LimiteDisabili
+                : opzioni.LimiteStandard;
+
+            if (opzioni.ConsentiSforo)
             {
-                int limite = HasStudenteConDisabilita
-                    ? MaxStudentiConDisabilita
-                    : MaxStudentiSenzaDisabilita;
-                return limite - NumeroStudenti;
+                // In modalità sforo diamo un margine fittizio equo a tutte le classi,
+                // così che chi ha meno alunni risulti sempre avere 'più posti liberi'
+                // e la distribuzione continui a spalmare uniformemente l'eccedenza.
+                limite += 50;
             }
+
+            return limite - NumeroStudenti;
         }
     }
 }

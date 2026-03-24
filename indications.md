@@ -64,25 +64,3 @@ In ordine preciso di chiamata:
    - Ultimissimo raffinamento: bilanciamento dei profitti alti scartando dal circolo di swap gli Stranieri, i DSA e perfino coloro inquadrati sotto IRC.
 
 Questo incastro basato sul blocco a filtri progressivi "congela" l'ossatura sociologica senza disfare gli equilibri faticosamente raggiunti nei passaggi precedenti, consegnando le classi finali bilanciate.
-
----
-
-## Formati di Output
-
-Alla fine dell'algoritmo di distribuzione, il sistema produce tre tipologie di output fondamentali per l'istituto:
-
-### 1. Persistenza nel Database (Output di Dominio)
-L'output primario interno del `DistribuzioneClassiService` è salvare l'assegnazione definitiva. Tramite le due operazioni `SaveChangesAsync()`, il sistema associa in via permanente la `ClasseId` a ogni istanza `Studente` coinvolta, consolidandola e rimuovendo l'alunno dallo stato di _Non Assegnato_.
-
-### 2. Tabulato su Console (Report di Validazione)
-Lanciando il programma principale (modulo principale / test), terminata la distribuzione viene generato un lungo spaccato testuale automatico a terminale:
-- Viene stampata la composizione di ogni sezione creata, riportando alunni iscritti in totale, DSA, Disabili, Stranieri e Femmine.
-- Lista alunni nominale estesa fornita di tag evidenti legati alla situazione dell'alunno (`[DSA]`, `[STRANIERO]`).
-- Apposita dashboard diagnostica finale denominata **VERIFICHE AUTOMATICHE** in grado di testare matematicamente e avvertire l'utente sull'inviolabilità dei vincoli calcolati (max 1 disabile per classe, limiti di isolamento gruppi, tolleranze max di $\Delta \le 1$ ecc.), avvalorandoli con spunte come ✅ OK o allarmi come ❌ FALLITO.
-
-### 3. File PDF A4 (Esportazione Istituzionale Fisica)
-Tramite l'utility ad hoc `EsportazioneDatiPDF`, supportata dal motore *QuestPDF*, l'output passa da astratto a documentale. Viene generato il _"Registro_Classi_Prime_Aggiornato.pdf"_:
-- Lo script suddivide perentoriamente le classi su una nuova pagina A4 separata una dall'altra.
-- Produce un'intestazione per classe che guida nella tabulazione.
-- Le righe alfanumeriche degli studenti all'interno di una determinata sezione vengono riordinate prima per `Cognome` e contestualmente per `Nome`. Le celle offrono `N°`, `Cognome`, `Nome` ed uno spazio adibito interamente alle _Firme_ docenti.
-- Terminata la rielaborazione grafica, esegue un `Process.Start` da shell richiedendo all'OS l'apertura forzata (visualizzazione) immediata del PDF compilato.

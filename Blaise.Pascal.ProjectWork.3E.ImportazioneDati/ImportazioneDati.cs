@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Importazione_Dati_Excel
 {
-    class ImportazioneDati
+    public class ImportazioneDati
     {
         public string percorsoFile;
         public void EstrapolaDati()

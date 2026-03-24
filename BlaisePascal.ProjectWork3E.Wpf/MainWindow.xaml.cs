@@ -18,6 +18,7 @@ namespace BlaisePascal.ProjectWork3E.Wpf
     public partial class MainWindow : Window
     {
         private string importedFilePath = string.Empty;
+        public Importazione_Dati_Excel.ImportazioneDati importazione = new Importazione_Dati_Excel.ImportazioneDati();
 
         public MainWindow()
         {
@@ -43,6 +44,8 @@ namespace BlaisePascal.ProjectWork3E.Wpf
                 MessageBox.Show("Seleziona prima un file Excel usando il tasto 'Sfoglia file'.", "Attenzione", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+
+            importazione.percorsoFile = importedFilePath;
 
             MessageBox.Show($"Percorso file copiato con successo nella variabile!\n\nPercorso: {importedFilePath}", "Verifica Importazione", MessageBoxButton.OK, MessageBoxImage.Information);
         }

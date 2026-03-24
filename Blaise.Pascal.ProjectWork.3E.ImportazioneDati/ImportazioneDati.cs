@@ -21,7 +21,30 @@ namespace Importazione_Dati_Excel
             List<Genitore> listaGenitori = new List<Genitore>();
             List<PreferenzaCompagno> listaPreferenzeCompagni = new List<PreferenzaCompagno>();
 
+            /*
+            aggiungi nella importazione dati i seguenti dati dal file excell: 
+            QUESTI SONO PER STUDENTE
+            voto esame terza media 
+            fa religione 
+            disabilita assistenza base 
+            data arrivo in italia 
+            data di nascita 
+            
+            QUESTI SONO PER PREFERENZE COMPAGNO
+            nome compagno
+            cognome compagno
+            
+            QUESTI SONO PER SCUOLA PROV
+            comune scuola
+            
+            GENITORE  OK
+            IndirizzoScelto OK
 
+
+            in piu' bisogna implementare la clean architecture
+            
+            
+            */
             // per il percorso file bisogna fare in modo che dalla WPF (sfoglia file) venga messo il percorso nella varibaile percorsoFIle
 
             if (!File.Exists(percorsoFile))

@@ -15,6 +15,15 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
             /*
+             public string Nome { get; set; }ok
+        public string Cognome { get; set; }ok
+        public bool Sesso { get; set; }ok
+        public string CodiceFiscale { get; set; }ok
+        public string Cittadinanza { get; set; }ok
+        public string ComuneResidenza { get; set; }ok
+        public bool Disabilita { get; set; }
+        public bool Dsa { get; set; }
+        public string Indirizzo { get; set; }
             1. DATI STUDENTE (Anagrafica e Profilo)
 - Nome   ok
 - Cognome  ok

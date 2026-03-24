@@ -14,7 +14,23 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
-
+            /*
+            1. DATI STUDENTE (Anagrafica e Profilo)
+- Nome   ok
+- Cognome  ok
+- Sesso (es. Maschio/Femmina)  ok
+- Codice Fiscale (Univoco) ok
+- Data di Nascita ok
+- Data Arrivo in Italia (Opzionale) ok
+- Cittadinanza (Codice ISTAT, es. 200 = Italia) ok
+- Comune di Residenza ok
+- Indirizzo ok
+- Disabilità (Sì/No) ok
+- DSA (Sì/No) ok
+- Disabilità Assistenza Base (Sì/No) ok
+- Fa Religione (Sì/No) ok
+- Voto Esame Terza Media ok
+            */
             var command = connection.CreateCommand();
             command.CommandText =
             @"
@@ -33,6 +49,7 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
                 ComuneResidenza TEXT,
                 Disabilita BOOLEAN,
                 Dsa BOOLEAN,
+                DisabilitaAssistenzaBase BOOLEAN,
                 Indirizzo TEXT
             );
             ";

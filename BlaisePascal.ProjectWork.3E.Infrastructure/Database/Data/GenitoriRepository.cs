@@ -8,7 +8,12 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
     internal class GenitoriRepository
     {
         private string connectionString = "Data Source=studenti.db";
-
+/*
+3. DATI GENITORI (Tutori)
+- Nome Genitore ok
+- Numero di Telefono ok
+- Email Genitore ok 
+*/
         // 1️⃣ Creazione tabella Genitori
         public void CreaTabella()
         {

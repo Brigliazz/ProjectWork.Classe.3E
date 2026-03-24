@@ -21,7 +21,8 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
             @"
             CREATE TABLE IF NOT EXISTS Scelte (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                CodiceFiscaleStudenteScelto TEXT,
+                NomeStudenteScelto TEXT,
+                CognomeStudenteScelto TEXT,
                 CodiceFiscaleStudente TEXT,
                 FOREIGN KEY (CodiceFiscaleStudente) REFERENCES Studenti(CodiceFiscale)
             );

@@ -20,7 +20,8 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
             @"
             CREATE TABLE IF NOT EXISTS ScuolaProvenienza (
                 CodiceScuola TEXT,
-                Denominazione TEXT,
+                NomeScuola TEXT,
+                ComuneScuola TEXT,
                 CodiceFiscaleStudente TEXT,
                 FOREIGN KEY (CodiceFiscaleStudente) REFERENCES Studenti(CodiceFiscale)
             );

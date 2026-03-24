@@ -10,7 +10,7 @@ namespace Importazione_Dati_Excel
 {
     class ImportazioneDati
     {
-        string percorsoFile = "C:\\Users\\pietro.mannu\\Alunni.xlsx";
+        public string percorsoFile;
         public void EstrapolaDati()
         {
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
@@ -23,8 +23,6 @@ namespace Importazione_Dati_Excel
 
 
             // per il percorso file bisogna fare in modo che dalla WPF (sfoglia file) venga messo il percorso nella varibaile percorsoFIle
-
-            string percorsoFile = "C:\\Users\\pietro.mannu\\Alunni.xlsx";
 
             if (!File.Exists(percorsoFile))
             {

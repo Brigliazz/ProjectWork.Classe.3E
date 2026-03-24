@@ -1,26 +1,2 @@
-Documentazione Progetto WPF - Generatore Classi Prime
-
-Ecco i punti principali di quello che abbiamo fatto:
-
-1. L'Aspetto Visivo (Il Design)
-Abbiamo creato un'interfaccia moderna, pulita e facile da usare. Per tenere il codice ordinato, abbiamo inventato degli "Stili" (Style) personalizzati che dicono ai vari elementi come devono apparire:
-- Bottone Principale (PrimaryButton): è il bottone blu acceso, che usiamo per le azioni più importanti. È arrotondato e cambia leggermente sfumatura quando ci passi sopra con il mouse.
-- Bottone Secondario (SecondaryButton): è un bottone più chiaro, usato per azioni meno importanti come il semplice "Sfoglia".
-- Testi guidati (StepLabel): uno stile per i titoli dei vari passaggi, per renderli leggibili ed eleganti.
-
-2. I 3 Passaggi della Schermata
-Abbiamo diviso il lavoro dell'utente in tre step logici, per guidarlo senza confonderlo:
-
-- Passaggio 1: "Inserisci Dati (File Excel)"
-Abbiamo messo una casella di testo e un bottone "Sfoglia file".
-Cosa fa dietro le quinte: Quando l'utente clicca il bottone, il nostro codice apre una finestra di Windows per cercare il file. Abbiamo messo un "filtro" intelligente che permette di vedere e scegliere SOLO i file Excel (.xlsx o .xls). Una volta scelto, il percorso del file viene scritto nella casella.
-
-- Passaggio 2: "Elaborazione"
-In questa sezione c'è il tasto "Importa" e un quadratino in cui l'utente può inserire il "Numero Classi" desiderato. 
-Cosa fa dietro le quinte: Se l'utente preme "Importa", il programma fa prima un controllo. Se la casella del file è vuota, blocca tutto e mostra un avviso ("Attenzione, seleziona prima un file!"). Se invece il file c'è, lo memorizza in modo sicuro nel suo "cervello" (una variabile) e mostra un messaggio di successo confermando il percorso.
-Abbiamo anche preparato un bel bottone "Genera Classi" e una barra di caricamento (che per ora è graficamente nascosta) pronti per quando scriveremo la logica dei calcoli.
-
-- Passaggio 3: "Risultati"
-È l'ultimo step, dove c'è il grande tasto "Scarica Risultati", pronto per essere "acceso" quando i calcoli di smistamento delle classi saranno terminati.
-
-In sintesi: abbiamo costruito un "guscio" bellissimo e funzionante. L'interfaccia sa già come interfacciarsi con l'utente, come fargli scegliere il file sbagliando il meno possibile, controlla che i dati base ci siano e li memorizza pronti per i passaggi futuri.
+Documentazione WPF (Piraccini , Sacchetti , Libasci)
+https://docs.google.com/document/d/1r1L5bqT0mHt_3JPvPmeFhmuB8f0ohnRvgEllJ-y2q-Y/edit?usp=sharing

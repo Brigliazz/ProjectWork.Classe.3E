@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Blaise.Pascal.ProjectWork.3E.EsportazioneDati\Blaise.Pascal.ProjectWork.3E.EsportazioneDati.csproj" />
-    <ProjectReference Include="..\Blaise.Pascal.ProjectWork.3E.ImportazioneDati\Blaise.Pascal.ProjectWork.3E.ImportazioneDati.csproj" />
     <ProjectReference Include="..\BlaisePascal.ProjectWork.3E.Application\BlaisePascal.ProjectWork.3E.Application.csproj" />
     <ProjectReference Include="..\BlaisePascal.ProjectWork.3E.Console\BlaisePascal.ProjectWork.3E.Console.csproj" />
     <ProjectReference Include="..\BlaisePascal.ProjectWork.3E.Domain\BlaisePascal.ProjectWork.3E.Domain.csproj" />

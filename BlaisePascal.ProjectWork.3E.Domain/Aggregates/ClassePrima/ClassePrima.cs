@@ -75,9 +75,9 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
             studente.AssegnaAClasse(Id);
         }
 
-        /// <summary>
+
         /// Rimuove uno studente dalla classe (usato per swap in F3).
-        /// </summary>
+
         public void RimuoviStudente(Studente.Studente studente)
         {
             if (!_studentiIds.Remove(studente.Id))
@@ -91,9 +91,9 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
                 HasStudenteConDisabilita = false;
         }
 
-        /// <summary>
+
         /// Posti liberi rimanenti nella classe. Accetta OpzioniDistribuzione per gestire lo sforo.
-        /// </summary>
+
         public int OttieniCapienzaResidua(BlaisePascal.ProjectWork._3E.Domain.Services.OpzioniDistribuzione opzioni)
         {
             int limite = HasStudenteConDisabilita

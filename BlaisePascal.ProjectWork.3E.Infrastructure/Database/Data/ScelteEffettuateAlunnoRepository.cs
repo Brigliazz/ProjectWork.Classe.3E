@@ -8,7 +8,7 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
     internal class ScelteEffettuateAlunnoRepository
     {
         private string connectionString = "Data Source=studenti.db";
-ddd
+
         // 1️⃣ Creazione tabella Scelte
         public void CreaTabella()
         {

@@ -8,17 +8,20 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices;
 using Microsoft.Win32;
+
 
 namespace BlaisePascal.ProjectWork3E.Wpf
 {
+
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
     {
+        public ImportazioneExcelService ImportazioneService { get; set; } = new ImportazioneExcelService();
         private string importedFilePath = string.Empty;
-        public Importazione_Dati_Excel.ImportazioneDati importazione = new Importazione_Dati_Excel.ImportazioneDati();
 
         public MainWindow()
         {
@@ -37,15 +40,15 @@ namespace BlaisePascal.ProjectWork3E.Wpf
 
         private void BtnImport_Click(object sender, RoutedEventArgs e)
         {
-            importedFilePath = TxtFilePath.Text;
 
+            importedFilePath = TxtFilePath.Text;
+            ImportazioneService.EstrapolaDati(importedFilePath);
             if (string.IsNullOrWhiteSpace(importedFilePath))
             {
                 MessageBox.Show("Seleziona prima un file Excel usando il tasto 'Sfoglia file'.", "Attenzione", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            importazione.percorsoFile = importedFilePath;
 
             MessageBox.Show($"Percorso file copiato con successo nella variabile!\n\nPercorso: {importedFilePath}", "Verifica Importazione", MessageBoxButton.OK, MessageBoxImage.Information);
         }

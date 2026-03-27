@@ -11,15 +11,17 @@ using BlaisePascal.ProjectWork._3E.Domain.Services;
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 Console.WriteLine();
 Console.WriteLine("╔══════════════════════════════════════════════════════╗");
-Console.WriteLine("║   TEST INTERATTIVO DISTRIBUZIONE CLASSI             ║");
-Console.WriteLine("╚══════════════════════════════════════════════════════╝");
-Console.WriteLine();
+int numAutomazione = LeggiIntero("Quante sezioni di Automazione vuoi creare? (max 4): ", 0, 4);
+int numInformatica = LeggiIntero("Quante sezioni di Informatica vuoi creare? (max 9): ", 0, 9);
+int numBio = LeggiIntero("Quante sezioni di Bio vuoi creare? (max 1): ", 0, 1);
 
-// ─── 1. INPUT UTENTE ───────────────────────────────────────────────
-// Sezioni ammesse dal dominio (Automazione: A-D, Informatica: E-O)
-string[] sezioniDisponibili = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "L", "M", "N", "O" };
+int numSezioni = numAutomazione + numInformatica + numBio;
+if (numSezioni == 0)
+{
+    Console.WriteLine("Devi creare almeno una sezione. Uscita.");
+    return;
+}
 
-int numSezioni = LeggiIntero("Quante sezioni (classi) vuoi creare? (max 13): ", 1, sezioniDisponibili.Length);
 int totaleStudenti = LeggiIntero("Quanti studenti vuoi generare? : ", 1, 1000);
 
 // ─── 2. CALCOLO MEDIA E RICHIESTA AUTORIZZAZIONE ──────────────────
@@ -58,6 +60,7 @@ if (media > 27)
             Console.WriteLine("❌ Sforo NON autorizzato. L'algoritmo potrebbe non riuscire ad assegnare tutti gli studenti.");
             Console.ResetColor();
             contr = true;
+            return;
         }
 
         Console.WriteLine();
@@ -75,18 +78,13 @@ else
 var studenteRepo = new InMemoryStudenteRepository();
 var classeRepo = new InMemoryClasseRepository();
 
-// ─── 4. CREAZIONE CLASSI ──────────────────────────────────────────
-for (int idx = 0; idx < numSezioni; idx++)
-{
-    string sez = sezioniDisponibili[idx];
-    string indirizzo = (sez == "A" || sez == "B" || sez == "C" || sez == "D") ? "Automazione" : "Informatica";
-    var classe = ClassePrima.Crea(
-        Sezione.Crea(sez),
-        IndirizzoScolastico.Crea(indirizzo));
-    await classeRepo.AddAsync(classe);
-}
+// ─── 4. IMPOSTAZIONE GENERAZIONE DINAMICA ───────────────────────────
+// Invece di pre-creare le classi le facciamo generare dinamicamente dall'algoritmo
+opzioni.SezioniPerIndirizzo["Automazione"] = numAutomazione;
+opzioni.SezioniPerIndirizzo["Informatica"] = numInformatica;
+opzioni.SezioniPerIndirizzo["Bio"] = numBio;
 
-Console.WriteLine($"✅ Create {numSezioni} classi (1{sezioniDisponibili[0]} - 1{sezioniDisponibili[numSezioni - 1]})");
+Console.WriteLine($"✅ Verranno generate dinamicamente {numSezioni} classi dall'algoritmo.");
 Console.WriteLine();
 
 // ─── 5. CREAZIONE STUDENTI ────────────────────────────────────────

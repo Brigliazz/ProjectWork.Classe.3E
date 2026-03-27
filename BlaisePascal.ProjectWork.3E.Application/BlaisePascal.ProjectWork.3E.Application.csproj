@@ -11,4 +11,8 @@
     <ProjectReference Include="..\BlaisePascal.ProjectWork.3E.Domain\BlaisePascal.ProjectWork.3E.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="QuestPDF" Version="2026.2.4" />
+  </ItemGroup>
+
 </Project>

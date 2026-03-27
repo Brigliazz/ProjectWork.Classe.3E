@@ -1,0 +1,18 @@
+﻿  Individuazione dei progetti da ripristinare...
+  Tutti i progetti sono aggiornati per il ripristino.
+  BlaisePascal.ProjectWork.3E.Domain -> C:\Users\samuele.romagnoli.3e\Desktop\pcto\BlaisePascal.ProjectWork.3E.Domain\bin\Debug\net9.0\BlaisePascal.ProjectWork.3E.Domain.dll
+C:\Users\samuele.romagnoli.3e\Desktop\pcto\BlaisePascal.ProjectWork.3E.Application\ExportModels\EsportazioneDatiPDF.cs(1,7): error CS0246: Il nome di tipo o di spazio dei nomi 'QuestPDF' non ├¿ stato trovato. Probabilmente manca una direttiva using o un riferimento all'assembly. [C:\Users\samuele.romagnoli.3e\Desktop\pcto\BlaisePascal.ProjectWork.3E.Application\BlaisePascal.ProjectWork.3E.Application.csproj]
+C:\Users\samuele.romagnoli.3e\Desktop\pcto\BlaisePascal.ProjectWork.3E.Application\ExportModels\EsportazioneDatiPDF.cs(2,7): error CS0246: Il nome di tipo o di spazio dei nomi 'QuestPDF' non ├¿ stato trovato. Probabilmente manca una direttiva using o un riferimento all'assembly. [C:\Users\samuele.romagnoli.3e\Desktop\pcto\BlaisePascal.ProjectWork.3E.Application\BlaisePascal.ProjectWork.3E.Application.csproj]
+C:\Users\samuele.romagnoli.3e\Desktop\pcto\BlaisePascal.ProjectWork.3E.Application\ExportModels\EsportazioneDatiPDF.cs(3,7): error CS0246: Il nome di tipo o di spazio dei nomi 'QuestPDF' non ├¿ stato trovato. Probabilmente manca una direttiva using o un riferimento all'assembly. [C:\Users\samuele.romagnoli.3e\Desktop\pcto\BlaisePascal.ProjectWork.3E.Application\BlaisePascal.ProjectWork.3E.Application.csproj]
+
+Compilazione NON RIUSCITA.
+
+C:\Users\samuele.romagnoli.3e\Desktop\pcto\BlaisePascal.ProjectWork.3E.Application\ExportModels\EsportazioneDatiPDF.cs(1,7): error CS0246: Il nome di tipo o di spazio dei nomi 'QuestPDF' non ├¿ stato trovato. Probabilmente manca una direttiva using o un riferimento all'assembly. [C:\Users\samuele.romagnoli.3e\Desktop\pcto\BlaisePascal.ProjectWork.3E.Application\BlaisePascal.ProjectWork.3E.Application.csproj]
+C:\Users\samuele.romagnoli.3e\Desktop\pcto\BlaisePascal.ProjectWork.3E.Application\ExportModels\EsportazioneDatiPDF.cs(2,7): error CS0246: Il nome di tipo o di spazio dei nomi 'QuestPDF' non ├¿ stato trovato. Probabilmente manca una direttiva using o un riferimento all'assembly. [C:\Users\samuele.romagnoli.3e\Desktop\pcto\BlaisePascal.ProjectWork.3E.Application\BlaisePascal.ProjectWork.3E.Application.csproj]
+C:\Users\samuele.romagnoli.3e\Desktop\pcto\BlaisePascal.ProjectWork.3E.Application\ExportModels\EsportazioneDatiPDF.cs(3,7): error CS0246: Il nome di tipo o di spazio dei nomi 'QuestPDF' non ├¿ stato trovato. Probabilmente manca una direttiva using o un riferimento all'assembly. [C:\Users\samuele.romagnoli.3e\Desktop\pcto\BlaisePascal.ProjectWork.3E.Application\BlaisePascal.ProjectWork.3E.Application.csproj]
+    Avvisi: 0
+    Errori: 3
+
+Tempo trascorso 00:00:00.76
+
+Sono disponibili aggiornamenti del carico di lavoro. Per altre informazioni, eseguire `dotnet workload list`.

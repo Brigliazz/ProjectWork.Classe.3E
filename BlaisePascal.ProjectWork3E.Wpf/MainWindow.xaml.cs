@@ -12,7 +12,7 @@ using BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices;
 using Microsoft.Win32;
 using BlaisePascal.ProjectWork._3E.Domain.Services;
 using BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data;
-
+using BlaisePascal.ProjectWork._3E.Infrastructure.Database.DatabaseInitializer;
 
 
 namespace BlaisePascal.ProjectWork3E.Wpf
@@ -43,36 +43,24 @@ namespace BlaisePascal.ProjectWork3E.Wpf
 
         private void BtnImport_Click(object sender, RoutedEventArgs e)
         {
-
             importedFilePath = TxtFilePath.Text;
-            // Creazione tabelle e salvataggio dati importati nel database ogni volta che si clicca su "Importa"
-            AlunnoRepository.CreaTabella();
-            AlunnoRepository.SvuotaTabella();
-            AlunnoRepository.SalvaStudenti(ImportazioneService.EstrapolaDati(importedFilePath).Alunni);
-            GenitoriRepository.CreaTabella();
-            GenitoriRepository.SvuotaTabella();
-            GenitoriRepository.SalvaGenitori(ImportazioneService.EstrapolaDati(importedFilePath).Genitori);
-            PreferenzaCompagnoRepository.CreaTabella();
-            PreferenzaCompagnoRepository.SvuotaTabella();
-            PreferenzaCompagnoRepository.SalvaPreferenze(ImportazioneService.EstrapolaDati(importedFilePath).PreferenzeCompagni);
-            ScelteEffettuateAlunnoRepository.CreaTabella();
-            ScelteEffettuateAlunnoRepository.SvuotaTabella();
-            ScelteEffettuateAlunnoRepository.SalvaScelte(ImportazioneService.EstrapolaDati(importedFilePath).Scelte);
-            ScuolaDiProvenienzaRepository.CreaTabella();
-            ScuolaDiProvenienzaRepository.SvuotaTabella();
-            ScuolaDiProvenienzaRepository.SalvaScuole(ImportazioneService.EstrapolaDati(importedFilePath).Scuole);
 
-            ImportazioneService.EstrapolaDati(importedFilePath);
+     
+            var datiEstratti = ImportazioneService.EstrapolaDati(importedFilePath);
+
+          
+            DatabaseInitializer.Initialize(datiEstratti);
+
             if (string.IsNullOrWhiteSpace(importedFilePath))
             {
                 MessageBox.Show("Seleziona prima un file Excel usando il tasto 'Sfoglia file'.", "Attenzione", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-
             MessageBox.Show($"Percorso file copiato con successo nella variabile!\n\nPercorso: {importedFilePath}", "Verifica Importazione", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
 
     }
+
 }

@@ -1,20 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using BlaisePascal.ProjectWork._3E.Application.ImportModels;
 using Microsoft.Data.Sqlite;
- // Assicurati di avere il modello Genitore qui
+using System.Collections.Generic;
 
 namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
 {
     internal class GenitoriRepository
     {
         private string connectionString = "Data Source=studenti.db";
-/*
-3. DATI GENITORI (Tutori)
-- Nome Genitore ok
-- Numero di Telefono ok
-- Email Genitore ok 
-*/
-        // 1️⃣ Creazione tabella Genitori
+
         public void CreaTabella()
         {
             using var connection = new SqliteConnection(connectionString);
@@ -26,6 +19,7 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
             CREATE TABLE IF NOT EXISTS Genitori (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 Nome TEXT,
+                Cognome TEXT,
                 NumeroTelefono TEXT,
                 Email TEXT,
                 CodiceFiscaleStudente TEXT,
@@ -36,9 +30,7 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
             command.ExecuteNonQuery();
         }
 
-        /* 
-        // Inserimento lista di genitori (da attivare quando hai la lista)
-        public void SalvaGenitori(List<Genitore> genitori)
+        public void SalvaGenitori(List<GenitoreImportDTO> genitori)
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
@@ -49,19 +41,19 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
                 command.CommandText =
                 @"
                 INSERT INTO Genitori
-                (Nome, NumeroTelefono, Email, CodiceFiscaleStudente)
+                (Nome, Cognome, NumeroTelefono, Email, CodiceFiscaleStudente)
                 VALUES
-                (@nome, @telefono, @email, @cf)
+                (@nome, @cognome, @telefono, @email, @cf)
                 ";
-                
-                command.Parameters.AddWithValue("@nome", g.Nome);
-                command.Parameters.AddWithValue("@telefono", g.NumeroTelefono);
-                command.Parameters.AddWithValue("@email", g.Email);
-                command.Parameters.AddWithValue("@cf", g.CodiceFiscaleStudente);
+
+                command.Parameters.AddWithValue("@nome", g.Nome ?? string.Empty);
+                command.Parameters.AddWithValue("@cognome", g.Cognome ?? string.Empty);
+                command.Parameters.AddWithValue("@telefono", g.Numero ?? string.Empty);
+                command.Parameters.AddWithValue("@email", g.Mail ?? string.Empty);
+                command.Parameters.AddWithValue("@cf", g.CodiceFiscale ?? string.Empty);
 
                 command.ExecuteNonQuery();
             }
         }
-        */
     }
 }

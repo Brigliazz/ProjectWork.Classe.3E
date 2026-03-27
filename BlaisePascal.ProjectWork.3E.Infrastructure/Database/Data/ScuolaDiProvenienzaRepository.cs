@@ -1,7 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using BlaisePascal.ProjectWork._3E.Application.ImportModels;
 using Microsoft.Data.Sqlite;
-// Assicurati di avere il modello ScuolaProvenienza qui
+using System.Collections.Generic;
 
 namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
 {
@@ -9,7 +8,6 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
     {
         private string connectionString = "Data Source=studenti.db";
 
-        // Creazione tabella ScuolaProvenienza
         public void CreaTabella()
         {
             using var connection = new SqliteConnection(connectionString);
@@ -30,9 +28,7 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
             command.ExecuteNonQuery();
         }
 
-        /* 
-        // Inserimento lista di scuole (da attivare quando hai la lista)
-        public void SalvaScuole(List<ScuolaProvenienza> scuole)
+        public void SalvaScuole(List<ScuolaProvImportDto> scuole)
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
@@ -43,18 +39,18 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
                 command.CommandText =
                 @"
                 INSERT INTO ScuolaProvenienza
-                (CodiceScuola, Denominazione, CodiceFiscaleStudente)
+                (CodiceScuola, NomeScuola, ComuneScuola, CodiceFiscaleStudente)
                 VALUES
-                (@codice, @denom, @cf)
+                (@codice, @denom, @comune, @cf)
                 ";
-                
-                command.Parameters.AddWithValue("@codice", s.CodiceScuola);
-                command.Parameters.AddWithValue("@denom", s.Denominazione);
-                command.Parameters.AddWithValue("@cf", s.CodiceFiscaleStudente);
+
+                command.Parameters.AddWithValue("@codice", s.CodiceScuola ?? string.Empty);
+                command.Parameters.AddWithValue("@denom", s.DenominazioneScuola ?? string.Empty);
+                command.Parameters.AddWithValue("@comune", s.ComuneScuola ?? string.Empty);
+                command.Parameters.AddWithValue("@cf", s.CodiceFiscale ?? string.Empty);
 
                 command.ExecuteNonQuery();
             }
         }
-        */
     }
 }

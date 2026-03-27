@@ -11,5 +11,6 @@ namespace BlaisePascal.ProjectWork._3E.Application.ImportModels
         public string CodiceScuola { get; set; }
         public string DenominazioneScuola { get; set; }
         public string ComuneScuola { get; set; }
+        public string CodiceFiscale { get; set; }
     }
 }

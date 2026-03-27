@@ -167,7 +167,7 @@ try
     var tuttiStudenti = await studenteRepo.GetAllAsync();
 
     Console.WriteLine("╔══════════════════════════════════════════════════════════════════════════════════════╗");
-    Console.WriteLine("║   RISULTATI DISTRIBUZIONE                                                          ║");
+    Console.WriteLine("║   RISULTATI DISTRIBUZIONE                                                            ║");
     Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════════════╝");
     Console.WriteLine();
 

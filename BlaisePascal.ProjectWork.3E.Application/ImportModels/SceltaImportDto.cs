@@ -9,6 +9,6 @@ namespace BlaisePascal.ProjectWork._3E.Application.ImportModels
     public  class SceltaImportDto
     {
         public string IndirizzoScelto { get; set; }
-        public string CodiceFiscale { get; set; }
+        public string CodiceFiscaleStudente { get; set; }
     }
 }

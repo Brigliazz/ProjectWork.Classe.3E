@@ -38,23 +38,30 @@ if (media > 27)
     Console.WriteLine("    È necessaria un'autorizzazione per procedere in deroga (sforo).");
     Console.ResetColor();
     Console.WriteLine();
-    Console.Write("Autorizzi lo sforo dei limiti? (s/n): ");
+    bool contr = false;
+    while (!contr)
+    {
+        Console.Write("Autorizzi lo sforo dei limiti? (s/n): ");
 
-    string? risposta = Console.ReadLine()?.Trim().ToLower();
-    if (risposta == "s" || risposta == "si" || risposta == "sì")
-    {
-        opzioni.ConsentiSforo = true;
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine("✅ Sforo autorizzato. L'algoritmo procederà in deroga.");
-        Console.ResetColor();
+        string? risposta = Console.ReadLine()?.Trim().ToLower();
+        if (risposta == "s" || risposta == "si" || risposta == "sì")
+        {
+            opzioni.ConsentiSforo = true;
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("✅ Sforo autorizzato. L'algoritmo procederà in deroga.");
+            Console.ResetColor();
+            contr = true;
+        }
+        else if (risposta == "n" || risposta == "no")
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("❌ Sforo NON autorizzato. L'algoritmo potrebbe non riuscire ad assegnare tutti gli studenti.");
+            Console.ResetColor();
+            contr = true;
+        }
+
+        Console.WriteLine();
     }
-    else
-    {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine("❌ Sforo NON autorizzato. L'algoritmo potrebbe non riuscire ad assegnare tutti gli studenti.");
-        Console.ResetColor();
-    }
-    Console.WriteLine();
 }
 else
 {
@@ -160,7 +167,7 @@ try
     var tuttiStudenti = await studenteRepo.GetAllAsync();
 
     Console.WriteLine("╔══════════════════════════════════════════════════════════════════════════════════════╗");
-    Console.WriteLine("║   RISULTATI DISTRIBUZIONE                                                          ║");
+    Console.WriteLine("║   RISULTATI DISTRIBUZIONE                                                            ║");
     Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════════════╝");
     Console.WriteLine();
 

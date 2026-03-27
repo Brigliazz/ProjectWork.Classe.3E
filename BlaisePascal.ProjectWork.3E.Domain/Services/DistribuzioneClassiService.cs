@@ -20,13 +20,13 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             _classeRepository = classeRepository;
         }
 
-        /// <summary>
-        /// Esegue la distribuzione degli studenti nelle classi in 3 fasi:
-        /// F1 — Scheletro delle Classi (disabili)
-        /// F2 — Distribuzione Ragazze
-        /// F3 — Distribuzione Maschi + bilanciamento soft
-        /// Restituisce una matrice (lista di liste) con gli studenti per ogni classe.
-        /// </summary>
+
+        // Esegue la distribuzione degli studenti nelle classi in 3 fasi:
+        // F1 — Scheletro delle Classi (disabili)
+        // F2 — Distribuzione Ragazze
+        // F3 — Distribuzione Maschi + bilanciamento soft
+        // Restituisce una matrice (lista di liste) con gli studenti per ogni classe.
+
         public async Task<List<List<Studente>>> DistribuisciAsync(OpzioniDistribuzione? opzioni = null)
         {
             opzioni ??= OpzioniDistribuzione.Default;

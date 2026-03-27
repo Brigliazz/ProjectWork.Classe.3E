@@ -56,7 +56,7 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
                 command.Parameters.AddWithValue("@codice", s.CodiceScuola ?? string.Empty);
                 command.Parameters.AddWithValue("@denom", s.DenominazioneScuola ?? string.Empty);
                 command.Parameters.AddWithValue("@comune", s.ComuneScuola ?? string.Empty);
-                command.Parameters.AddWithValue("@cf", s.CodiceFiscale ?? string.Empty);
+                command.Parameters.AddWithValue("@cf", s.CodiceFiscaleStudente ?? string.Empty);
 
                 command.ExecuteNonQuery();
             }

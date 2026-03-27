@@ -54,7 +54,7 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
                 ";
 
                 command.Parameters.AddWithValue("@nomeScelto", p.NomeStudenteScelto ?? string.Empty);
-                command.Parameters.AddWithValue("@cf", p.CodiceFiscale ?? string.Empty);
+                command.Parameters.AddWithValue("@cf", p.CodiceFiscaleStudente ?? string.Empty);
 
                 command.ExecuteNonQuery();
             }

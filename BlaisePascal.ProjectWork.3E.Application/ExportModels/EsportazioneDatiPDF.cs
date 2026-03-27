@@ -1,9 +1,10 @@
+/*
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using System.Collections.Generic;
 using System.Linq;
-/*
+
 // 1. Configurazione licenza
 QuestPDF.Settings.License = LicenseType.Community;
 namespace Blaise.Pascal.ProjectWork._3E.EsportazioneDati

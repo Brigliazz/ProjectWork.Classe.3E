@@ -53,5 +53,13 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
 
             return string.Equals(Nome, indirizzoAtteso, StringComparison.OrdinalIgnoreCase);
         }
+
+        public static IndirizzoScolastico DaSezione(Sezione sezione)
+        {
+            if (!SezioneToIndirizzo.TryGetValue(sezione.Valore, out var indirizzoNome))
+                throw new DomainException($"Impossibile determinare l'indirizzo per la sezione {sezione.Valore}");
+
+            return Crea(indirizzoNome);
+        }
     }
 }

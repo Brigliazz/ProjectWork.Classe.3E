@@ -34,8 +34,50 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             var studenti = await _studenteRepository.GetNonAssegnatiAsync();
             var classi = await _classeRepository.GetAllAsync();
 
-            if (classi.Count == 0)
-                throw new DomainException("Non ci sono classi disponibili per la distribuzione.");
+            if (classi.Count == 0)//se non ci sono classi, ne creo di nuove
+            {
+                if (opzioni.SezioniPerIndirizzo != null && opzioni.SezioniPerIndirizzo.Count > 0)
+                {
+                    var mapSezioni = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        { "Automazione", new[] { "A", "B", "C", "D" } },
+                        { "Informatica", new[] { "E", "F", "G", "H", "I", "L", "M", "N", "O" } },
+                        { "Bio", new[] { "Bio" } }
+                    };
+
+                    foreach (var kvp in opzioni.SezioniPerIndirizzo)
+                    {
+                        string indirizzoNome = kvp.Key;
+                        int quantita = kvp.Value;
+
+                        if (quantita <= 0) continue;
+
+                        if (!mapSezioni.TryGetValue(indirizzoNome, out var sezioniAmmesse))
+                            throw new DomainException($"Indirizzo sconosciuto o non configurato per la generazione: {indirizzoNome}");
+
+                        if (quantita > sezioniAmmesse.Length)
+                            throw new DomainException($"Richieste {quantita} sezioni per {indirizzoNome}, ma ne sono disponibili massimo {sezioniAmmesse.Length}.");
+
+                        var indirizzo = IndirizzoScolastico.Crea(indirizzoNome);
+
+                        for (int i = 0; i < quantita; i++)
+                        {
+                            var sezione = Sezione.Crea(sezioniAmmesse[i]);
+                            var nuovaClasse = ClassePrima.Crea(sezione, indirizzo);
+
+                            await _classeRepository.AddAsync(nuovaClasse);
+                            classi.Add(nuovaClasse);
+                        }
+                    }
+
+                    if (classi.Count == 0)
+                        throw new DomainException("Impossibile generare le classi.");
+                }
+                else
+                {
+                    throw new DomainException("Non ci sono classi disponibili per la distribuzione e non ne è stata richiesta la generazione.");
+                }
+            }
 
             if (studenti.Count == 0)
                 return new List<List<Studente>>();
@@ -43,19 +85,19 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             // Pool mutabile: man mano che assegniamo uno studente, lo rimuoviamo
             var pool = new List<Studente>(studenti);
 
-            // 
+            
             //  F1 — SCHELETRO DELLE CLASSI (Disabili)
-            // 
+            
             F1_AssegnaDisabili(pool, classi, opzioni);
 
-            // 
+            
             //  F2 — DISTRIBUZIONE RAGAZZE
-            // 
+            
             F2_DistribuisciRagazze(pool, classi, opzioni);
 
-            // 
+            
             //  F3 — DISTRIBUZIONE MASCHI + BILANCIAMENTO SOFT
-            // 
+            
             F3_DistribuisciMaschiEBilancia(pool, classi, studenti, opzioni);
 
             // Salva tutto
@@ -77,9 +119,9 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             return matriceClassi;
         }
 
-        // 
+        
         //  F1 — Scheletro delle Classi
-        // 
+        
         private void F1_AssegnaDisabili(List<Studente> pool, List<ClassePrima> classi, OpzioniDistribuzione opzioni)
         {
             var disabili = pool
@@ -105,9 +147,9 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             }
         }
 
-        // 
+        
         //  F2 — Distribuzione Ragazze
-        // 
+        
         private void F2_DistribuisciRagazze(List<Studente> pool, List<ClassePrima> classi, OpzioniDistribuzione opzioni)
         {
             var ragazze = pool
@@ -173,9 +215,8 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             }
         }
 
-        // 
         //  F3 — Distribuzione Maschi + Bilanciamento Soft
-        // 
+        
         private void F3_DistribuisciMaschiEBilancia(
             List<Studente> pool, List<ClassePrima> classi, List<Studente> tuttiStudenti, OpzioniDistribuzione opzioni)
         {
@@ -231,10 +272,10 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                 escludi: s => s.IsStraniero || s.ProfiloBES.HasDSA || s.FaReligione);
         }
 
-        // 
+        
         //  Bilanciamento Stranieri (max 30% per classe + distribuzione
         //  uniforme finché Δ > 1)
-        // 
+        
         private void BilanciaSoft_Stranieri(List<ClassePrima> classi, List<Studente> tuttiStudenti, OpzioniDistribuzione opzioni)
         {
             while (true)
@@ -308,11 +349,11 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             }
         }
 
-        // 
+         
         //  Bilanciamento generico per attributo booleano
         //  (DSA, IRC, Eccellenze)
         //  Sposta dalla classe con più alla classe con meno finché Δ > 1
-        // 
+         
         private void BilanciaSoft_Attributo(
             List<ClassePrima> classi, List<Studente> tuttiStudenti,
             Func<Studente, bool> predicate, string nome, OpzioniDistribuzione opzioni,
@@ -389,11 +430,11 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             }
         }
 
-        // ─────────────────────────────────────────────────────────────────
+        
         //  Bilanciamento per Scuola di Provenienza
         //  Per ogni codice scuola presente, bilancia il numero di studenti
         //  provenienti da quella scuola tra le classi (swap finché Δ > 1)
-        // ─────────────────────────────────────────────────────────────────
+        
         private void BilanciaSoft_ScuolaProvenienza(
             List<ClassePrima> classi, List<Studente> tuttiStudenti, OpzioniDistribuzione opzioni)
         {

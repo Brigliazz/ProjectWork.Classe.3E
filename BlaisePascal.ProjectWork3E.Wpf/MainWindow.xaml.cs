@@ -45,10 +45,8 @@ namespace BlaisePascal.ProjectWork3E.Wpf
         {
             importedFilePath = TxtFilePath.Text;
 
-     
-            var datiEstratti = ImportazioneService.EstrapolaDati(importedFilePath);
 
-          
+            var datiEstratti = ImportazioneService.EstrapolaDati(importedFilePath);
             DatabaseInitializer.Initialize(datiEstratti);
 
             if (string.IsNullOrWhiteSpace(importedFilePath))
@@ -60,7 +58,5 @@ namespace BlaisePascal.ProjectWork3E.Wpf
             MessageBox.Show($"Percorso file copiato con successo nella variabile!\n\nPercorso: {importedFilePath}", "Verifica Importazione", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-
     }
-
 }

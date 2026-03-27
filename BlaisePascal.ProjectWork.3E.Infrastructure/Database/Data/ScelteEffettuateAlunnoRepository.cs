@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using BlaisePascal.ProjectWork._3E.Application.ImportModels;
 using Microsoft.Data.Sqlite;
-// Assicurati di avere il modello Scelta qui
+using System.Collections.Generic;
 
 namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
 {
     internal class ScelteEffettuateAlunnoRepository
     {
         private string connectionString = "Data Source=studenti.db";
-ddd
-        // 1️⃣ Creazione tabella Scelte
+
         public void CreaTabella()
         {
             using var connection = new SqliteConnection(connectionString);
@@ -29,9 +27,7 @@ ddd
             command.ExecuteNonQuery();
         }
 
-        /* 
-        // 2️⃣ Inserimento lista di scelte (da attivare quando hai la lista)
-        public void SalvaScelte(List<Scelta> scelte)
+        public void SalvaScelte(List<SceltaImportDto> scelte)
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
@@ -46,13 +42,12 @@ ddd
                 VALUES
                 (@indirizzo, @cf)
                 ";
-                
-                command.Parameters.AddWithValue("@indirizzo", sc.IndirizzoScelto);
-                command.Parameters.AddWithValue("@cf", sc.CodiceFiscaleStudente);
+
+                command.Parameters.AddWithValue("@indirizzo", sc.IndirizzoScelto ?? string.Empty);
+                command.Parameters.AddWithValue("@cf", sc.CodiceFiscale ?? string.Empty);
 
                 command.ExecuteNonQuery();
             }
         }
-        */
     }
 }

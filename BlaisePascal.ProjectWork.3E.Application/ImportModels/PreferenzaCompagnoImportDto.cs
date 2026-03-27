@@ -9,5 +9,6 @@ namespace BlaisePascal.ProjectWork._3E.Application.ImportModels
     public class PreferenzaCompagnoImportDto
     {
         public string NomeStudenteScelto { get; set; }
+        public string CodiceFiscale { get; set; }
     }
 }

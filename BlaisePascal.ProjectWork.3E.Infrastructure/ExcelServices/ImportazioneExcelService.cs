@@ -114,10 +114,13 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices
                             DataArrivoInItalia = EstraiDato(row, idxDataArrivo)
                         });
 
-                        risultato.Scelte.Add(new SceltaImportDto { IndirizzoScelto = EstraiDato(row, idxIndirizzoScelto) });
-                        risultato.Scuole.Add(new ScuolaProvImportDto { CodiceScuola = EstraiDato(row, idxCodScuola), DenominazioneScuola = EstraiDato(row, idxNomeScuola), ComuneScuola = EstraiDato(row, idxComuneScuola) });
-                        risultato.Genitori.Add(new GenitoreImportDTO { Numero = EstraiDato(row, idxTelGenitore1), Nome = EstraiDato(row, idxNomeGenitore1), Cognome = EstraiDato(row, idxCognomeGenitore1), Mail = EstraiDato(row, idxMailGenitore1) });
-                        risultato.PreferenzeCompagni.Add(new PreferenzaCompagnoImportDto { NomeStudenteScelto = EstraiDato(row, idxPrefNomeCompagno) });
+                        risultato.Scelte.Add(new SceltaImportDto { 
+                            IndirizzoScelto = EstraiDato(row, idxIndirizzoScelto),
+                            CodiceFiscale = EstraiDato(row, idxCf),
+                        });
+                        risultato.Scuole.Add(new ScuolaProvImportDto { CodiceScuola = EstraiDato(row, idxCodScuola), DenominazioneScuola = EstraiDato(row, idxNomeScuola), ComuneScuola = EstraiDato(row, idxComuneScuola), CodiceFiscale = EstraiDato(row, idxCf), });
+                        risultato.Genitori.Add(new GenitoreImportDTO { Numero = EstraiDato(row, idxTelGenitore1), Nome = EstraiDato(row, idxNomeGenitore1), Cognome = EstraiDato(row, idxCognomeGenitore1), Mail = EstraiDato(row, idxMailGenitore1), CodiceFiscale = EstraiDato(row, idxCf), });
+                        risultato.PreferenzeCompagni.Add(new PreferenzaCompagnoImportDto { NomeStudenteScelto = EstraiDato(row, idxPrefNomeCompagno), CodiceFiscale = EstraiDato(row, idxCf), });
                     }
                 }
 

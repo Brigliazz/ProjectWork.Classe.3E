@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using BlaisePascal.ProjectWork._3E.Application.ImportModels;
 using Microsoft.Data.Sqlite;
+using System.Collections.Generic;
 
 namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
 {
@@ -19,16 +16,38 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
             var command = connection.CreateCommand();
             command.CommandText =
             @"
-            CREATE TABLE IF NOT EXISTS Scelte (
+            CREATE TABLE IF NOT EXISTS PreferenzeCompagno (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 NomeStudenteScelto TEXT,
-                CognomeStudenteScelto TEXT,
                 CodiceFiscaleStudente TEXT,
                 FOREIGN KEY (CodiceFiscaleStudente) REFERENCES Studenti(CodiceFiscale)
             );
             ";
 
             command.ExecuteNonQuery();
+        }
+
+        public void SalvaPreferenze(List<PreferenzaCompagnoImportDto> preferenze)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            foreach (var p in preferenze)
+            {
+                var command = connection.CreateCommand();
+                command.CommandText =
+                @"
+                INSERT INTO PreferenzeCompagno
+                (NomeStudenteScelto, CodiceFiscaleStudente)
+                VALUES
+                (@nomeScelto, @cf)
+                ";
+
+                command.Parameters.AddWithValue("@nomeScelto", p.NomeStudenteScelto ?? string.Empty);
+                command.Parameters.AddWithValue("@cf", p.CodiceFiscale ?? string.Empty);
+
+                command.ExecuteNonQuery();
+            }
         }
     }
 }

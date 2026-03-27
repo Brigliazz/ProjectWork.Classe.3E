@@ -27,9 +27,7 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
             command.ExecuteNonQuery();
         }
 
-        /* 
-        // 2️⃣ Inserimento lista di scelte (da attivare quando hai la lista)
-        public void SalvaScelte(List<Scelta> scelte)
+        public void SalvaScelte(List<SceltaImportDto> scelte)
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
@@ -44,9 +42,9 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
                 VALUES
                 (@indirizzo, @cf)
                 ";
-                
-                command.Parameters.AddWithValue("@indirizzo", sc.IndirizzoScelto);
-                command.Parameters.AddWithValue("@cf", sc.CodiceFiscaleStudente);
+
+                command.Parameters.AddWithValue("@indirizzo", sc.IndirizzoScelto ?? string.Empty);
+                command.Parameters.AddWithValue("@cf", sc.CodiceFiscale ?? string.Empty);
 
                 command.ExecuteNonQuery();
             }

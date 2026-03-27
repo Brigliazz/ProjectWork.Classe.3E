@@ -11,6 +11,8 @@ using System.Windows.Shapes;
 using BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices;
 using Microsoft.Win32;
 using BlaisePascal.ProjectWork._3E.Domain.Services;
+using BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data;
+
 
 
 namespace BlaisePascal.ProjectWork3E.Wpf
@@ -43,6 +45,23 @@ namespace BlaisePascal.ProjectWork3E.Wpf
         {
 
             importedFilePath = TxtFilePath.Text;
+            // Creazione tabelle e salvataggio dati importati nel database ogni volta che si clicca su "Importa"
+            AlunnoRepository.CreaTabella();
+            AlunnoRepository.SvuotaTabella();
+            AlunnoRepository.SalvaStudenti(ImportazioneService.EstrapolaDati(importedFilePath).Alunni);
+            GenitoriRepository.CreaTabella();
+            GenitoriRepository.SvuotaTabella();
+            GenitoriRepository.SalvaGenitori(ImportazioneService.EstrapolaDati(importedFilePath).Genitori);
+            PreferenzaCompagnoRepository.CreaTabella();
+            PreferenzaCompagnoRepository.SvuotaTabella();
+            PreferenzaCompagnoRepository.SalvaPreferenze(ImportazioneService.EstrapolaDati(importedFilePath).PreferenzeCompagni);
+            ScelteEffettuateAlunnoRepository.CreaTabella();
+            ScelteEffettuateAlunnoRepository.SvuotaTabella();
+            ScelteEffettuateAlunnoRepository.SalvaScelte(ImportazioneService.EstrapolaDati(importedFilePath).Scelte);
+            ScuolaDiProvenienzaRepository.CreaTabella();
+            ScuolaDiProvenienzaRepository.SvuotaTabella();
+            ScuolaDiProvenienzaRepository.SalvaScuole(ImportazioneService.EstrapolaDati(importedFilePath).Scuole);
+
             ImportazioneService.EstrapolaDati(importedFilePath);
             if (string.IsNullOrWhiteSpace(importedFilePath))
             {

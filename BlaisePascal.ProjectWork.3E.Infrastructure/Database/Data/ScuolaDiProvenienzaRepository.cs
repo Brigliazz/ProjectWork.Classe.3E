@@ -4,11 +4,11 @@ using System.Collections.Generic;
 
 namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
 {
-    internal class ScuolaDiProvenienzaRepository
+    public static class ScuolaDiProvenienzaRepository
     {
-        private string connectionString = "Data Source=studenti.db";
+        private static string connectionString = "Data Source=studenti.db";
 
-        public void CreaTabella()
+        public static void CreaTabella()
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
@@ -27,8 +27,17 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
 
             command.ExecuteNonQuery();
         }
+        public static void SvuotaTabella()
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
 
-        public void SalvaScuole(List<ScuolaProvImportDto> scuole)
+            var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM ScuolaProvenienza;";
+            command.ExecuteNonQuery();
+        }
+
+        public static void SalvaScuole(List<ScuolaProvImportDto> scuole)
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();

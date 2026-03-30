@@ -67,9 +67,8 @@
 
             <StackPanel>
                 <TextBlock Text="Generatore Classi Prime" FontSize="26" FontWeight="Bold" 
-                       Foreground="#0f172a" HorizontalAlignment="Center" Margin="0,0,0,32"/>
+                           Foreground="#0f172a" HorizontalAlignment="Center" Margin="0,0,0,32"/>
 
-                <!-- Step 1 -->
                 <StackPanel Margin="0,0,0,28">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                         <Border Background="#e0e7ff" CornerRadius="12" Width="24" Height="24" Margin="0,0,8,0">
@@ -77,7 +76,7 @@
                         </Border>
                         <TextBlock Text="Inserisci Dati (File Excel)" Style="{StaticResource StepLabel}"/>
                     </StackPanel>
-                    
+
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -92,7 +91,6 @@
                     </Grid>
                 </StackPanel>
 
-                <!-- Step 2 -->
                 <StackPanel Margin="0,0,0,28">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                         <Border Background="#e0e7ff" CornerRadius="12" Width="24" Height="24" Margin="0,0,8,0">
@@ -100,23 +98,21 @@
                         </Border>
                         <TextBlock Text="Elaborazione" Style="{StaticResource StepLabel}"/>
                     </StackPanel>
-                    
+
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="12"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        
+
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="1.2*"/>
-                            <ColumnDefinition Width="12"/>
-                            <ColumnDefinition Width="2*"/>
                         </Grid.ColumnDefinitions>
-                        
-                        <Button x:Name="BtnImport" Grid.Row="0" Grid.Column="0" Content="Importa" MinHeight="42" Style="{StaticResource SecondaryButton}" Click="BtnImport_Click"/>
-                        
-                        <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+
+                        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left">
                             <TextBlock Text="Numero Classi:" VerticalAlignment="Center" Foreground="#475569" FontWeight="SemiBold" Margin="0,0,8,0"/>
                             <Border Background="#f8fafc" BorderBrush="#cbd5e1" BorderThickness="1" CornerRadius="8" Width="50" Height="42">
                                 <TextBox x:Name="TxtNumeroClassi" Text="1" FontSize="14" FontWeight="SemiBold" TextAlignment="Center"
@@ -125,17 +121,17 @@
                             </Border>
                         </StackPanel>
 
-                       
+                        <Button x:Name="BtnImport" Grid.Row="0" Grid.Column="2" Content="Importa" MinHeight="42" 
+                                Style="{StaticResource SecondaryButton}" Click="BtnImport_Click"/>
                     </Grid>
 
                     <ProgressBar x:Name="ProgBar" Minimum="0" Maximum="100" Height="8" Margin="0,16,0,0" 
-                             Foreground="#10b981" Background="#e2e8f0" BorderThickness="0" Visibility="Collapsed"/>
+                                 Foreground="#10b981" Background="#e2e8f0" BorderThickness="0" Visibility="Collapsed"/>
 
                     <TextBlock x:Name="TxtStatus" Text="Elaborazione in corso... 0%" FontSize="12" Foreground="#64748b" 
-                           HorizontalAlignment="Center" Margin="0,8,0,0" Visibility="Collapsed"/>
+                               HorizontalAlignment="Center" Margin="0,8,0,0" Visibility="Collapsed"/>
                 </StackPanel>
 
-                <!-- Step 3 -->
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                         <Border Background="#e0e7ff" CornerRadius="12" Width="24" Height="24" Margin="0,0,8,0">
@@ -143,7 +139,12 @@
                         </Border>
                         <TextBlock Text="Risultati" Style="{StaticResource StepLabel}"/>
                     </StackPanel>
-                    <Button x:Name="BtnDownload" Content="Scarica Risultati" MinHeight="42" Style="{StaticResource PrimaryButton}"/>
+
+                    <Button x:Name="BtnGenera" Content="Genera Classi" MinHeight="42" Margin="0,0,0,12" 
+                            Style="{StaticResource PrimaryButton}" Click="BtnGenera_Click"/>
+
+                    <Button x:Name="BtnDownload" Content="Scarica Risultati" MinHeight="42" 
+                            Style="{StaticResource SecondaryButton}" Click="BtnDownload_Click"/>
                 </StackPanel>
 
             </StackPanel>

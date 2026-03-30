@@ -25,6 +25,9 @@ namespace BlaisePascal.ProjectWork3E.Wpf
     {
         public ImportazioneExcelService ImportazioneService { get; set; } = new ImportazioneExcelService();
         private string importedFilePath = string.Empty;
+        public int numeroClassiInformatica;
+        public int numeroClassiElettronica;
+        public int numeroClassiBiotecnologie;
 
         public MainWindow()
         {
@@ -45,17 +48,32 @@ namespace BlaisePascal.ProjectWork3E.Wpf
         {
             importedFilePath = TxtFilePath.Text;
 
-
-            var datiEstratti = ImportazioneService.EstrapolaDati(importedFilePath);
-            DatabaseInitializer.Initialize(datiEstratti);
-
+            // 1. Controllo del file (spostato IN CIMA per evitare errori se il file è vuoto)
             if (string.IsNullOrWhiteSpace(importedFilePath))
             {
                 MessageBox.Show("Seleziona prima un file Excel usando il tasto 'Sfoglia file'.", "Attenzione", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            MessageBox.Show($"Percorso file copiato con successo nella variabile!\n\nPercorso: {importedFilePath}", "Verifica Importazione", MessageBoxButton.OK, MessageBoxImage.Information);
+            // 2. Lettura, conversione e salvataggio del numero delle classi
+            // Usiamo int.TryParse per assicurarci che l'utente abbia inserito dei numeri e non lettere
+            bool isInfoValid = int.TryParse(TxtClassiInformatica.Text, out numeroClassiInformatica);
+            bool isElettroValid = int.TryParse(TxtClassiElettronica.Text, out numeroClassiElettronica);
+            bool isBiotecValid = int.TryParse(TxtClassiBiotecnologie.Text, out numeroClassiBiotecnologie);
+
+            if (!isInfoValid || !isElettroValid || !isBiotecValid)
+            {
+                MessageBox.Show("Inserisci dei valori numerici validi per il numero delle classi.", "Errore Inserimento", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // 3. Elaborazione dei dati (ora sicura)
+            var datiEstratti = ImportazioneService.EstrapolaDati(importedFilePath);
+            DatabaseInitializer.Initialize(datiEstratti);
+
+            // Messaggio di successo (aggiornato per mostrarti che le variabili funzionano)
+            MessageBox.Show($"Importazione completata!\n\nFile: {importedFilePath}\nClassi Informatica: {numeroClassiInformatica}\nClassi Elettronica: {numeroClassiElettronica}\nClassi Biotecnologie: {numeroClassiBiotecnologie}",
+                            "Verifica Importazione", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         private void BtnDownload_Click(object sender, RoutedEventArgs e)
         {

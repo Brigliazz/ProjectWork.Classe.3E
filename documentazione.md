@@ -64,3 +64,21 @@ In ordine preciso di chiamata:
    - Ultimissimo raffinamento: bilanciamento dei profitti alti scartando dal circolo di swap gli Stranieri, i DSA e perfino coloro inquadrati sotto IRC.
 
 Questo incastro basato sul blocco a filtri progressivi "congela" l'ossatura sociologica senza disfare gli equilibri faticosamente raggiunti nei passaggi precedenti, consegnando le classi finali bilanciate.
+
+---
+
+## Pattern e Costrutti Tecnici Utilizzati
+
+All'interno dell'algoritmo vengono impiegate alcune tecnologie fondamentali del linguaggio C# per garantire performance, leggibilità e astrazione:
+
+### 1. Asincronia (`async`, `await`, `Task`)
+Tutte le interazioni con i repository (che rappresentano il database o il disco) sono marcate come disaccoppiate e "asincrone" tramite il ritorno di un oggetto **`Task`**.  
+Questa promessa al futuro indica che il sistema effettuerà il recupero dei dati, ma siccome è un'operazione lenta, usa l'istruzione **`await`** per congelare localmente l'esecuzione di questo metodo, ricedendo le risorse alla CPU in attesa della materializzazione vera e propria dei dati. È cruciale per ottimizzare lo strato I/O.
+
+### 2. LINQ (Language Integrated Query)
+Per setacciare il *pool* di allievi vengono impiegati molteplici comandi funzionali (le cosiddette Lambda Expressions), estremamente ottimizzati.
+* **`Where`**: Fa letteralmente il "vigile", decidendo di fare passare in una nuova micro-lista solo gli studenti che soddisfano specifici attributi (es: essere un'eccellenza, o essere disabili).
+* **`GroupBy`**: Separa e inscatola la massa di studenti accorpando tra loro coloro i quali condividono in comune uno stesso valore, nello specifico il varco della Scuola Media (Codice Scuola Provenienza).
+
+### 3. Cicli Infiniti Regolabili (`while(true)`)
+Nell'ultima macro-fase di bilanciamento (lo swapping mirato per DSA, eccellenze o stranieri), viene innescato un ciclo infinito `while(true)`. Contrariamente a una lettura letterale, l'algoritmo monitora ad ogni giro due variabili matematiche dinamiche (la percentuale massima di affollamento e il dislivello di presenza). Non appena le curve di distribuzione ritornano a un regime accettabile, l'istruzione **`break`** reciderà la circolarità del demone uscendo dal calcolo in sicurezza.

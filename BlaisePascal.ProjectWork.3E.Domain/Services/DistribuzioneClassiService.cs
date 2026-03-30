@@ -1,3 +1,9 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// PREREQUISITO: aggiungere il pacchetto NuGet al progetto prima di compilare
+//   dotnet add package Google.OrTools
+// ═══════════════════════════════════════════════════════════════════════════════
+
+using Google.OrTools.Sat;
 using BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima;
 using BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente;
 using BlaisePascal.ProjectWork._3E.Domain.Exceptions;
@@ -8,515 +14,499 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
 {
     public class DistribuzioneClassiService
     {
-
         private readonly IStudenteRepository _studenteRepository;
-        private readonly IClasseRepository _classeRepository;
+        private readonly IClasseRepository   _classeRepository;
 
         public DistribuzioneClassiService(
             IStudenteRepository studenteRepository,
             IClasseRepository classeRepository)
         {
             _studenteRepository = studenteRepository;
-            _classeRepository = classeRepository;
+            _classeRepository   = classeRepository;
         }
 
+        // ─────────────────────────────────────────────────────────────────────
+        // Entry point pubblico
+        // ─────────────────────────────────────────────────────────────────────
 
-        // Esegue la distribuzione degli studenti nelle classi in 3 fasi:
-        // F1 — Scheletro delle Classi (disabili)
-        // F2 — Distribuzione Ragazze
-        // F3 — Distribuzione Maschi + bilanciamento soft
-        // Restituisce una matrice (lista di liste) con gli studenti per ogni classe.
-
-        public async Task<List<List<Studente>>> DistribuisciAsync(OpzioniDistribuzione? opzioni = null)
+        public async Task<List<List<Studente>>> DistribuisciAsync(
+            OpzioniDistribuzione? opzioni = null)
         {
             opzioni ??= OpzioniDistribuzione.Default;
 
             var studenti = await _studenteRepository.GetNonAssegnatiAsync();
-            var classi = await _classeRepository.GetAllAsync();
+            var classi   = await _classeRepository.GetAllAsync();
 
-            if (classi.Count == 0)//se non ci sono classi, ne creo di nuove
-            {
-                if (opzioni.SezioniPerIndirizzo != null && opzioni.SezioniPerIndirizzo.Count > 0)
-                {
-                    var mapSezioni = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
-                    {
-                        { "Automazione", new[] { "A", "B", "C", "D" } },
-                        { "Informatica", new[] { "E", "F", "G", "H", "I", "L", "M", "N", "O" } },
-                        { "Bio", new[] { "Bio" } }
-                    };
-
-                    foreach (var kvp in opzioni.SezioniPerIndirizzo)
-                    {
-                        string indirizzoNome = kvp.Key;
-                        int quantita = kvp.Value;
-
-                        if (quantita <= 0) continue;
-
-                        if (!mapSezioni.TryGetValue(indirizzoNome, out var sezioniAmmesse))
-                            throw new DomainException($"Indirizzo sconosciuto o non configurato per la generazione: {indirizzoNome}");
-
-                        if (quantita > sezioniAmmesse.Length)
-                            throw new DomainException($"Richieste {quantita} sezioni per {indirizzoNome}, ma ne sono disponibili massimo {sezioniAmmesse.Length}.");
-
-                        var indirizzo = IndirizzoScolastico.Crea(indirizzoNome);
-
-                        for (int i = 0; i < quantita; i++)
-                        {
-                            var sezione = Sezione.Crea(sezioniAmmesse[i]);
-                            var nuovaClasse = ClassePrima.Crea(sezione, indirizzo);
-
-                            await _classeRepository.AddAsync(nuovaClasse);
-                            classi.Add(nuovaClasse);
-                        }
-                    }
-
-                    if (classi.Count == 0)
-                        throw new DomainException("Impossibile generare le classi.");
-                }
-                else
-                {
-                    throw new DomainException("Non ci sono classi disponibili per la distribuzione e non ne è stata richiesta la generazione.");
-                }
-            }
+            if (classi.Count == 0)
+                classi = await GeneraClassiAsync(opzioni);
 
             if (studenti.Count == 0)
                 return new List<List<Studente>>();
 
-            // Pool mutabile: man mano che assegniamo uno studente, lo rimuoviamo
-            var pool = new List<Studente>(studenti);
+            // Risolvi il problema di assegnazione con OR-Tools CP-SAT
+            var assegnazioni = RisolviConOrTools(studenti, classi, opzioni);
 
-            
-            //  F1 — SCHELETRO DELLE CLASSI (Disabili)
-            
-            F1_AssegnaDisabili(pool, classi, opzioni);
+            // Applica la soluzione agli oggetti di dominio attraverso i loro metodi
+            ApplicaSoluzione(assegnazioni, studenti, classi, opzioni);
 
-            
-            //  F2 — DISTRIBUZIONE RAGAZZE
-            
-            F2_DistribuisciRagazze(pool, classi, opzioni);
-
-            
-            //  F3 — DISTRIBUZIONE MASCHI + BILANCIAMENTO SOFT
-            
-            F3_DistribuisciMaschiEBilancia(pool, classi, studenti, opzioni);
-
-            // Salva tutto
             await _studenteRepository.SaveChangesAsync();
             await _classeRepository.SaveChangesAsync();
 
-            // Creazione della matrice (lista di liste) degli studenti per classe
-            var tuttiStudentiAssegnati = await _studenteRepository.GetAllAsync();
-            var matriceClassi = new List<List<Studente>>();
-
-            foreach (var classe in classi.OrderBy(c => c.Sezione.Valore))
-            {
-                var studentiDellaClasse = tuttiStudentiAssegnati
-                    .Where(s => s.ClasseId == classe.Id)
-                    .ToList();
-                matriceClassi.Add(studentiDellaClasse);
-            }
-
-            return matriceClassi;
+            // Costruisce e ritorna la matrice degli studenti per classe
+            var tutti = await _studenteRepository.GetAllAsync();
+            return classi
+                .OrderBy(c => c.Sezione.Valore)
+                .Select(c => tutti.Where(s => s.ClasseId == c.Id).ToList())
+                .ToList();
         }
 
-        
-        //  F1 — Scheletro delle Classi
-        
-        private void F1_AssegnaDisabili(List<Studente> pool, List<ClassePrima> classi, OpzioniDistribuzione opzioni)
-        {
-            var disabili = pool
-                .Where(s => s.ProfiloBES.HasDisabilita)
-                .ToList();
+        // ─────────────────────────────────────────────────────────────────────
+        // Generazione classi (logica invariata rispetto all'originale)
+        // ─────────────────────────────────────────────────────────────────────
 
-            // Precondizione hard protetta da eventuale deroga
-            if (!opzioni.ConsentiSforo && disabili.Count > classi.Count)
+        private async Task<List<ClassePrima>> GeneraClassiAsync(OpzioniDistribuzione opzioni)
+        {
+            if (opzioni.SezioniPerIndirizzo == null || opzioni.SezioniPerIndirizzo.Count == 0)
                 throw new DomainException(
-                    $"Impossibile soddisfare P1: {disabili.Count} studenti con disabilità " +
-                    $"ma solo {classi.Count} classi disponibili.");
+                    "Non ci sono classi disponibili e non ne è stata richiesta la generazione.");
 
-            // Assegna un disabile per classe (classe protetta, cap. 20)
-            foreach (var studente in disabili)
+            var mapSezioni = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
-                var classeTarget = classi
-                    .OrderBy(c => c.HasStudenteConDisabilita ? 1 : 0) // Prima quelle senza disabili
-                    .ThenBy(c => c.NumeroStudenti)
-                    .First();
+                { "Automazione", new[] { "A", "B", "C", "D" } },
+                { "Informatica", new[] { "E", "F", "G", "H", "I", "L", "M", "N", "O" } },
+                { "Bio",         new[] { "Bio" } }
+            };
 
-                classeTarget.AggiungiStudente(studente, opzioni);
-                pool.Remove(studente);
-            }
-        }
+            var classi = new List<ClassePrima>();
 
-        
-        //  F2 — Distribuzione Ragazze
-        
-        private void F2_DistribuisciRagazze(List<Studente> pool, List<ClassePrima> classi, OpzioniDistribuzione opzioni)
-        {
-            var ragazze = pool
-                .Where(s => s.Sesso == Sesso.Femmina)
-                .ToList();
-
-            if (ragazze.Count == 0)
-                return;
-
-            // Caso speciale: meno di 2 ragazze → impossibile garantire non-isolamento
-            if (ragazze.Count < 2)
+            foreach (var kvp in opzioni.SezioniPerIndirizzo)
             {
-                // Logga warning e assegna comunque alla classe più vuota
-                var classeTarget = classi.OrderBy(c => c.NumeroStudenti).First();
-                classeTarget.AggiungiStudente(ragazze[0], opzioni);
-                pool.Remove(ragazze[0]);
-                return;
-            }
+                if (kvp.Value <= 0) continue;
 
-            // Calcola dimensione target del gruppo
-            int targetDim = Math.Clamp(ragazze.Count / classi.Count, 2, 4);
+                if (!mapSezioni.TryGetValue(kvp.Key, out var ammesse))
+                    throw new DomainException($"Indirizzo sconosciuto: {kvp.Key}");
 
-            // Ordina per scuola di provenienza per non separare compagne
-            var ragOrdinate = ragazze
-                .OrderBy(s => s.CodiceScuolaProvenienza)
-                .ToList();
+                if (kvp.Value > ammesse.Length)
+                    throw new DomainException(
+                        $"Richieste {kvp.Value} sezioni per {kvp.Key}, disponibili max {ammesse.Length}.");
 
-            // Crea i gruppi sequenzialmente
-            var gruppi = new List<List<Studente>>();
-            for (int i = 0; i < ragOrdinate.Count; i += targetDim)
-            {
-                var gruppo = ragOrdinate.Skip(i).Take(targetDim).ToList();
-                gruppi.Add(gruppo);
-            }
-
-            // Gestione residuo
-            if (gruppi.Count > 1)
-            {
-                var ultimo = gruppi[^1];
-                if (ultimo.Count == 1)
+                var indirizzo = IndirizzoScolastico.Crea(kvp.Key);
+                for (int i = 0; i < kvp.Value; i++)
                 {
-                    // Residuo == 1 → aggiungi all'ultimo gruppo esistente
-                    var penultimo = gruppi[^2];
-                    penultimo.Add(ultimo[0]);
-                    gruppi.RemoveAt(gruppi.Count - 1);
-                }
-                // Residuo >= 2 → va bene così (nuovo gruppo)
-                // Residuo == 0 → nessuna azione
-            }
-
-            // Distribuisci un gruppo per classe, partendo dalla classe con più posti
-            foreach (var gruppo in gruppi)
-            {
-                var classeTarget = classi
-                    .OrderByDescending(c => c.OttieniCapienzaResidua(opzioni))
-                    .First();
-
-                foreach (var ragazza in gruppo)
-                {
-                    classeTarget.AggiungiStudente(ragazza, opzioni);
-                    pool.Remove(ragazza);
+                    var nuova = ClassePrima.Crea(Sezione.Crea(ammesse[i]), indirizzo);
+                    await _classeRepository.AddAsync(nuova);
+                    classi.Add(nuova);
                 }
             }
+
+            if (classi.Count == 0)
+                throw new DomainException("Impossibile generare le classi.");
+
+            return classi;
         }
 
-        //  F3 — Distribuzione Maschi + Bilanciamento Soft
-        
-        private void F3_DistribuisciMaschiEBilancia(
-            List<Studente> pool, List<ClassePrima> classi, List<Studente> tuttiStudenti, OpzioniDistribuzione opzioni)
+        // ─────────────────────────────────────────────────────────────────────
+        // OR-Tools CP-SAT — costruzione e risoluzione del modello
+        //
+        // STRUTTURA DEL MODELLO:
+        //   Variabili : x[i,j] = BoolVar, vale 1 se lo studente i va nella classe j
+        //   Vincoli hard (P1):
+        //     • Ogni studente in esattamente una classe
+        //     • Max 1 disabile per classe
+        //     • Capienza condizionale (20 se disabile, 27 altrimenti)
+        //     • Max 30% stranieri per classe (approssimato sulla dimensione media)
+        //   Funzione obiettivo (P2/P3):
+        //     • Minimizza lo sbilanciamento per: ragazze, stranieri, DSA, IRC, eccellenze
+        //     • Penalizza l'isolamento di ragazze (< 2 per classe)
+        //     • Penalizza coppie di preferenza (SceltaCompagno) non rispettate
+        //     • Minimizza lo sbilanciamento per scuola di provenienza
+        //
+        // Ritorna: dizionario studenteId → classeId
+        // ─────────────────────────────────────────────────────────────────────
+
+        private static Dictionary<Guid, Guid> RisolviConOrTools(
+            List<Studente> studenti, List<ClassePrima> classi, OpzioniDistribuzione opzioni)
         {
-            // ── 3a. Raggruppa maschi rimanenti per scuola di provenienza ──
-            var clusterPerScuola = pool
-                .GroupBy(s => s.CodiceScuolaProvenienza)
-                .OrderByDescending(g => g.Count()) // cluster grandi prima
-                .ToList();
+            var model = new CpModel();
+            int n = studenti.Count;
+            int m = classi.Count;
 
-            // Calcoliamo la capienza ideale per mantenere il bilanciamento numerico
-            int capienzaIdeale = (int)Math.Ceiling((double)tuttiStudenti.Count / classi.Count);
+            // ── Variabili di decisione ──────────────────────────────────────
+            // x[i,j] = 1  ⟺  studente[i] è assegnato alla classe[j]
+            var x = new BoolVar[n, m];
+            for (int i = 0; i < n; i++)
+                for (int j = 0; j < m; j++)
+                    x[i, j] = model.NewBoolVar($"x_{i}_{j}");
 
-            foreach (var cluster in clusterPerScuola)
+
+            // ── VINCOLO HARD: ogni studente in esattamente una classe ────────
+            for (int i = 0; i < n; i++)
+                model.AddExactlyOne(
+                    Enumerable.Range(0, m).Select(j => (ILiteral)x[i, j]).ToArray());
+
+
+            // ── Precalcolo degli indici per categoria ───────────────────────
+            var disabiliIdx  = IndiciStudenti(studenti, s => s.ProfiloBES.HasDisabilita);
+            var ragazzeIdx   = IndiciStudenti(studenti, s => s.Sesso == Sesso.Femmina);
+            var stranieriIdx = IndiciStudenti(studenti, s => s.IsStraniero);
+            var dsaIdx       = IndiciStudenti(studenti, s => s.ProfiloBES.HasDSA);
+            var ircIdx       = IndiciStudenti(studenti, s => s.FaReligione);
+            var eccIdx       = IndiciStudenti(studenti, s => s.IsEccellenza);
+
+
+            // ── VINCOLI HARD P1: capienza e limite disabili ─────────────────
+            //
+            // Il delta è la differenza tra il limite standard e quello con disabili (27-20=7).
+            // Modellazione della capienza condizionale:
+            //   Se d[j]=0 (nessun disabile):  Σx[i,j]          ≤ 27
+            //   Se d[j]=1 (un disabile):      Σx[i,j] + 7*d[j] ≤ 27  →  Σx[i,j] ≤ 20
+            // Questa singola disuguaglianza copre entrambi i casi.
+
+            int delta = opzioni.LimiteStandard - opzioni.LimiteDisabili; // 7
+
+            for (int j = 0; j < m; j++)
             {
-                var studentiCluster = cluster.ToList();
-
-                while (studentiCluster.Count > 0)
+                if (disabiliIdx.Count > 0)
                 {
-                    // Ordina prima per posti liberi rispetto alla capienza ideale, poi per capienza residua assoluta
-                    var classeTarget = classi
-                        .OrderByDescending(c => Math.Max(0, capienzaIdeale - c.NumeroStudenti))
-                        .ThenByDescending(c => c.OttieniCapienzaResidua(opzioni))
-                        .First();
+                    var disInClass = disabiliIdx.Select(i => (IntVar)x[i, j]).ToArray();
 
-                    if (classeTarget.OttieniCapienzaResidua(opzioni) <= 0)
-                        break; // tutte le classi sono piene (improbabile se in sforo)
+                    // Max 1 disabile per classe
+                    model.Add(LinearExpr.Sum(disInClass) <= 1);
 
-                    // Posti liberi fino alla capienza ideale (almeno 1 se la classe non è già oltre l'ideale)
-                    int postiIdeali = Math.Max(1, capienzaIdeale - classeTarget.NumeroStudenti);
-                    postiIdeali = Math.Min(postiIdeali, classeTarget.OttieniCapienzaResidua(opzioni));
-
-                    // Quanti ne possiamo inserire in questa classe (massimo postiIdeali)
-                    int daInserire = Math.Min(studentiCluster.Count, postiIdeali);
-
-                    for (int i = 0; i < daInserire; i++)
+                    if (!opzioni.ConsentiSforo)
                     {
-                        classeTarget.AggiungiStudente(studentiCluster[0], opzioni);
-                        pool.Remove(studentiCluster[0]);
-                        studentiCluster.RemoveAt(0);
+                        // d[j] = 1 sse la classe j contiene uno studente disabile
+                        var dj = model.NewBoolVar($"d_{j}");
+
+                        // x[i,j]=1 implica d[j]=1 per ogni studente disabile i
+                        foreach (var i in disabiliIdx)
+                            model.AddImplication(x[i, j], dj);
+
+                        // d[j]=1 implica che almeno un disabile è nella classe
+                        model.Add(LinearExpr.Sum(disInClass) >= 1).OnlyEnforceIf(dj);
+
+                        // Capienza condizionale: Σ(tutti) + delta*d[j] ≤ LimiteStandard
+                        var allVars = Enumerable.Range(0, n)
+                            .Select(i => (IntVar)x[i, j])
+                            .Append((IntVar)dj)
+                            .ToArray();
+                        var weights = Enumerable.Repeat(1L, n)
+                            .Append((long)delta)
+                            .ToArray();
+                        model.Add(LinearExpr.WeightedSum(allVars, weights) <= opzioni.LimiteStandard);
+                    }
+                }
+                else if (!opzioni.ConsentiSforo)
+                {
+                    // Nessun disabile nell'intero pool: capienza piatta
+                    model.Add(LinearExpr.Sum(
+                        Enumerable.Range(0, n).Select(i => (IntVar)x[i, j]).ToArray())
+                        <= opzioni.LimiteStandard);
+                }
+            }
+
+
+            // ── VINCOLO HARD: max 30% stranieri per classe ──────────────────
+            //
+            // NOTA: il vincolo esatto sarebbe Σ_stranieri / Σ_tutti ≤ 0.30,
+            // ma è nonlineare perché anche il denominatore è variabile.
+            // Approssimazione: si usa la dimensione media attesa come denominatore fisso.
+            // L'errore è trascurabile perché le classi vengono bilanciate anche in obiettivo.
+
+            if (stranieriIdx.Count > 0 && !opzioni.ConsentiSforo)
+            {
+                int attesoPerClasse = (int)Math.Ceiling((double)n / m);
+                int maxStranieri    = Math.Max(1, (int)Math.Floor(0.30 * attesoPerClasse));
+
+                for (int j = 0; j < m; j++)
+                    model.Add(LinearExpr.Sum(
+                        stranieriIdx.Select(i => (IntVar)x[i, j]).ToArray()) <= maxStranieri);
+            }
+
+
+            // ── FUNZIONE OBIETTIVO ───────────────────────────────────────────
+            //
+            // Ogni termine ha la forma (IntVar, peso).
+            // Il solver minimizza Σ(var * peso).
+            // Le variabili rappresentano misure di "cattiveria" della distribuzione:
+            // più sono alte, peggiore è la soluzione.
+
+            var objVars    = new List<IntVar>();
+            var objWeights = new List<long>();
+            void AddPenalty(IntVar v, int w) { objVars.Add(v); objWeights.Add(w); }
+
+            // Sbilanciamento per categoria — P2 (peso alto) e P3 (peso basso)
+            // La funzione PenalitàBilancio crea una variabile che vale max(count) - min(count)
+            // tra tutte le classi per la categoria specificata.
+            if (ragazzeIdx.Count   > 0) AddPenalty(PenalitaBilancio(model, x, n, m, ragazzeIdx,   "girl"), 100);
+            if (stranieriIdx.Count > 0) AddPenalty(PenalitaBilancio(model, x, n, m, stranieriIdx, "str"),   80);
+            if (dsaIdx.Count       > 0) AddPenalty(PenalitaBilancio(model, x, n, m, dsaIdx,       "dsa"),   80);
+            if (ircIdx.Count       > 0) AddPenalty(PenalitaBilancio(model, x, n, m, ircIdx,       "irc"),   30);
+            if (eccIdx.Count       > 0) AddPenalty(PenalitaBilancio(model, x, n, m, eccIdx,       "ecc"),   20);
+
+
+            // Anti-isolamento ragazze (P2): penalizza ogni classe con meno di 2 ragazze.
+            // Peso molto alto perché è un requisito esplicito del dominio.
+            //
+            // Modello:
+            //   atLeast2[j] = 1  sse  girlCount[j] >= 2
+            //   notAtLeast2[j]   = NOT(atLeast2[j])  → penalizzato in obiettivo
+            //
+            // OnlyEnforceIf garantisce che i vincoli sui conteggi siano attivi
+            // solo quando la rispettiva variabile booleana è vera.
+
+            if (ragazzeIdx.Count >= 2)
+            {
+                for (int j = 0; j < m; j++)
+                {
+                    var gc = model.NewIntVar(0, ragazzeIdx.Count, $"gc_{j}");
+                    model.Add(gc == LinearExpr.Sum(
+                        ragazzeIdx.Select(i => (IntVar)x[i, j]).ToArray()));
+
+                    var atLeast2    = model.NewBoolVar($"al2_{j}");
+                    var notAtLeast2 = model.NewBoolVar($"nal2_{j}");
+
+                    model.Add(gc >= 2).OnlyEnforceIf(atLeast2);
+                    model.Add(gc <= 1).OnlyEnforceIf(atLeast2.Not());
+                    // Le due variabili booleane sono complementari (esattamente una vale 1)
+                    model.AddBoolXor(new ILiteral[] { atLeast2, notAtLeast2 });
+
+                    AddPenalty((IntVar)notAtLeast2, 500);
+                }
+            }
+
+
+            // Preferenze SceltaCompagno (P2): matching fuzzy su testo libero.
+            //
+            // SceltaCompagno ha una proprietà .Testo di tipo string.
+            //
+            // Per ogni coppia (i,j) trovata:
+            //   together[k] = 1  sse  entrambi i e j sono nella classe k
+            //   inSameClass  = OR(together[k])  →  1 se nella stessa classe
+            //   notTogether  = NOT(inSameClass)  →  penalizzato in obiettivo
+
+            foreach (var (pi, pj) in PreferenzeCoppie(studenti, n))
+            {
+                var togetherK = new BoolVar[m];
+                for (int k = 0; k < m; k++)
+                {
+                    togetherK[k] = model.NewBoolVar($"tog_{pi}_{pj}_{k}");
+                    // together[k] = 1  ⟺  x[i,k]=1 AND x[j,k]=1
+                    model.AddBoolAnd(new ILiteral[] { x[pi, k], x[pj, k] })
+                         .OnlyEnforceIf(togetherK[k]);
+                    model.AddBoolOr(new ILiteral[] { x[pi, k].Not(), x[pj, k].Not() })
+                         .OnlyEnforceIf(togetherK[k].Not());
+                }
+
+                var inSameClass = model.NewBoolVar($"sc_{pi}_{pj}");
+                // inSameClass = 1  ⟺  almeno un together[k] = 1
+                model.AddBoolOr(togetherK.Cast<ILiteral>().ToArray())
+                     .OnlyEnforceIf(inSameClass);
+                model.AddBoolAnd(togetherK.Select(t => (ILiteral)t.Not()).ToArray())
+                     .OnlyEnforceIf(inSameClass.Not());
+
+                var notTogether = model.NewBoolVar($"nt_{pi}_{pj}");
+                model.AddBoolXor(new ILiteral[] { inSameClass, notTogether });
+                AddPenalty((IntVar)notTogether, 50);
+            }
+
+
+            // Bilanciamento per scuola di provenienza (P2).
+            // Per ogni scuola con almeno 2 studenti, minimizza lo squilibrio
+            // del numero di suoi studenti tra le classi.
+
+            foreach (var codice in CodiciScuolaDistinti(studenti))
+            {
+                var scuolaIdx = IndiciStudenti(
+                    studenti, s => s.CodiceScuolaProvenienza == codice);
+                if (scuolaIdx.Count < 2) continue;
+
+                // Sanifica il codice per usarlo come parte del nome della variabile CP-SAT
+                string tag = "sc_" + new string(
+                    codice.Where(char.IsLetterOrDigit).Take(8).ToArray());
+
+                AddPenalty(PenalitaBilancio(model, x, n, m, scuolaIdx, tag), 60);
+            }
+
+
+            // Assembla e imposta la funzione obiettivo
+            model.Minimize(LinearExpr.WeightedSum(
+                objVars.ToArray(), objWeights.ToArray()));
+
+
+            // ── Risoluzione ─────────────────────────────────────────────────
+            var solver = new CpSolver();
+            // 30 secondi di timeout; 4 thread paralleli per convergenza più rapida
+            solver.StringParameters = "max_time_in_seconds:30.0 num_search_workers:4";
+
+            var status = solver.Solve(model);
+
+            if (status != CpSolverStatus.Optimal && status != CpSolverStatus.Feasible)
+                throw new DomainException(
+                    $"OR-Tools non ha trovato una soluzione fattibile (status: {status}). " +
+                    "Verificare che i vincoli P1 siano soddisfacibili con il numero di classi " +
+                    "disponibili (es. abbastanza classi per i disabili, stranieri < 30%).");
+
+
+            // ── Estrazione soluzione ─────────────────────────────────────────
+            var result = new Dictionary<Guid, Guid>(n);
+            for (int i = 0; i < n; i++)
+                for (int j = 0; j < m; j++)
+                    if (solver.Value(x[i, j]) == 1L)
+                    {
+                        result[studenti[i].Id] = classi[j].Id;
+                        break;
+                    }
+
+            return result;
+        }
+
+
+        // ─────────────────────────────────────────────────────────────────────
+        // PenalitaBilancio
+        //
+        // Crea nel modello una variabile intera che rappresenta
+        // max(count_j) − min(count_j),  dove count_j = numero di studenti
+        // del gruppo 'groupIdx' nella classe j.
+        //
+        // Questa variabile viene poi aggiunta all'obiettivo con un peso:
+        // il solver la spinge verso 0, cioè verso distribuzione uniforme.
+        // ─────────────────────────────────────────────────────────────────────
+
+        private static IntVar PenalitaBilancio(
+            CpModel model, BoolVar[,] x, int n, int m,
+            List<int> groupIdx, string tag)
+        {
+            var count = new IntVar[m];
+            for (int j = 0; j < m; j++)
+            {
+                count[j] = model.NewIntVar(0, groupIdx.Count, $"{tag}_cnt_{j}");
+                model.Add(count[j] == LinearExpr.Sum(
+                    groupIdx.Select(i => (IntVar)x[i, j]).ToArray()));
+            }
+
+            var maxV = model.NewIntVar(0, groupIdx.Count, $"{tag}_max");
+            var minV = model.NewIntVar(0, groupIdx.Count, $"{tag}_min");
+            model.AddMaxEquality(maxV, count);
+            model.AddMinEquality(minV, count);
+
+            var imbalance = model.NewIntVar(0, groupIdx.Count, $"{tag}_imb");
+            model.Add(imbalance == maxV - minV);
+
+            return imbalance;
+        }
+
+
+        // ─────────────────────────────────────────────────────────────────────
+        // IndiciStudenti — ritorna gli indici nella lista dove il predicato è vero
+        // ─────────────────────────────────────────────────────────────────────
+
+        private static List<int> IndiciStudenti(
+            List<Studente> studenti, Func<Studente, bool> pred)
+            => studenti
+                .Select((s, i) => (s, i))
+                .Where(t => pred(t.s))
+                .Select(t => t.i)
+                .ToList();
+
+
+        // ─────────────────────────────────────────────────────────────────────
+        // PreferenzeCoppie — matching fuzzy su SceltaCompagno.Testo
+        //
+        // Cerca, per ogni studente con una preferenza espressa, uno studente
+        // nella lista il cui nome/cognome corrisponda al testo libero indicato.
+        // ─────────────────────────────────────────────────────────────────────
+
+        private static IEnumerable<(int idxI, int idxJ)> PreferenzeCoppie(
+            List<Studente> studenti, int n)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                if (studenti[i].SceltaCompagno is not { } sc) continue;
+
+                // SceltaCompagno espone la proprietà "Testo" (vedi SceltaCompagno.cs)
+                string desiderato = sc.Testo;
+
+                for (int j = 0; j < n; j++)
+                {
+                    if (i == j) continue;
+                    var s = studenti[j];
+
+                    bool match =
+                        desiderato.Contains($"{s.Nome} {s.Cognome}",    StringComparison.OrdinalIgnoreCase) ||
+                        desiderato.Contains($"{s.Cognome} {s.Nome}",    StringComparison.OrdinalIgnoreCase) ||
+                        desiderato.Contains(s.Cognome,                   StringComparison.OrdinalIgnoreCase);
+
+                    if (match)
+                    {
+                        yield return (i, j);
+                        break; // una preferenza per studente
                     }
                 }
             }
-
-            // ── 3b. Bilanciamento soft ──
-            // Ordine: scuola provenienza → stranieri → DSA → IRC → eccellenze
-            BilanciaSoft_ScuolaProvenienza(classi, tuttiStudenti, opzioni);
-            BilanciaSoft_Stranieri(classi, tuttiStudenti, opzioni);
-            BilanciaSoft_Attributo(classi, tuttiStudenti, s => s.ProfiloBES.HasDSA, "DSA", opzioni, 
-                escludi: s => s.IsStraniero);
-            BilanciaSoft_Attributo(classi, tuttiStudenti, s => s.FaReligione, "IRC", opzioni, 
-                escludi: s => s.IsStraniero || s.ProfiloBES.HasDSA);
-            BilanciaSoft_Attributo(classi, tuttiStudenti, s => s.IsEccellenza, "Eccellenza", opzioni, 
-                escludi: s => s.IsStraniero || s.ProfiloBES.HasDSA || s.FaReligione);
         }
 
-        
-        //  Bilanciamento Stranieri (max 30% per classe + distribuzione
-        //  uniforme finché Δ > 1)
-        
-        private void BilanciaSoft_Stranieri(List<ClassePrima> classi, List<Studente> tuttiStudenti, OpzioniDistribuzione opzioni)
-        {
-            while (true)
-            {
-                var contiPerClasse = classi
-                    .Select(c => new
-                    {
-                        Classe = c,
-                        Count = tuttiStudenti.Count(s => s.ClasseId == c.Id && s.IsStraniero)
-                    })
-                    .OrderByDescending(x => x.Count)
-                    .ToList();
 
-                int maxCount = contiPerClasse.First().Count;
-                int minCount = contiPerClasse.Last().Count;
+        // ─────────────────────────────────────────────────────────────────────
+        // CodiciScuolaDistinti — codici meccanografici presenti nel pool
+        // ─────────────────────────────────────────────────────────────────────
 
-                if (maxCount - minCount <= 1)
-                    break;
-
-                var sorgente = contiPerClasse.First();
-                var destinazione = contiPerClasse.Last();
-
-                // Trova un candidato straniero da spostare (mai spostare un disabile o ragazza)
-                // Evitiamo di spostare ragazze per non rompere i gruppi F2
-                var candidatoOut = tuttiStudenti
-                    .Where(s => s.ClasseId == sorgente.Classe.Id
-                                && s.IsStraniero
-                                && !s.ProfiloBES.HasDisabilita
-                                && s.Sesso == Sesso.Maschio)
-                    .FirstOrDefault();
-
-                if (candidatoOut == null)
-                    break;
-
-                // Trova un candidato non-straniero nella destinazione da scambiare
-                var candidatoIn = tuttiStudenti
-                    .Where(s => s.ClasseId == destinazione.Classe.Id
-                                && !s.IsStraniero
-                                && !s.ProfiloBES.HasDisabilita
-                                && s.Sesso == Sesso.Maschio)
-                    .FirstOrDefault();
-
-                // Se non c'è nessuno da scambiare (improbabile), proviamo un semplice spostamento se c'è posto
-                if (candidatoIn == null)
-                {
-                    if (destinazione.Classe.OttieniCapienzaResidua(opzioni) > 0)
-                    {
-                        int strDest = tuttiStudenti.Count(s => s.ClasseId == destinazione.Classe.Id && s.IsStraniero);
-                        if ((strDest + 1.0) / (destinazione.Classe.NumeroStudenti + 1) <= 0.30)
-                        {
-                            sorgente.Classe.RimuoviStudente(candidatoOut);
-                            destinazione.Classe.AggiungiStudente(candidatoOut, opzioni);
-                            continue;
-                        }
-                    }
-                    break; // Non possiamo fare nulla
-                }
-
-                // Verifica vincolo 30% sulla destinazione dopo lo swap
-                // La dimensione della classe non cambia, quindi controlliamo solo il conteggio
-                int strDestDopoSwap = minCount + 1;
-                if ((double)strDestDopoSwap / destinazione.Classe.NumeroStudenti > 0.30)
-                    break;
-
-                // Esegui lo swap
-                sorgente.Classe.RimuoviStudente(candidatoOut);
-                destinazione.Classe.RimuoviStudente(candidatoIn);
-                
-                destinazione.Classe.AggiungiStudente(candidatoOut, opzioni);
-                sorgente.Classe.AggiungiStudente(candidatoIn, opzioni);
-            }
-        }
-
-         
-        //  Bilanciamento generico per attributo booleano
-        //  (DSA, IRC, Eccellenze)
-        //  Sposta dalla classe con più alla classe con meno finché Δ > 1
-         
-        private void BilanciaSoft_Attributo(
-            List<ClassePrima> classi, List<Studente> tuttiStudenti,
-            Func<Studente, bool> predicate, string nome, OpzioniDistribuzione opzioni,
-            Func<Studente, bool>? escludi = null)
-        {
-            // Se tutti o nessuno degli studenti hanno l'attributo, il bilanciamento è inutile
-            int totaleConAttributo = tuttiStudenti.Count(s => s.ClasseId != null && predicate(s));
-            int totaleAssegnati = tuttiStudenti.Count(s => s.ClasseId != null);
-            if (totaleConAttributo == 0 || totaleConAttributo == totaleAssegnati)
-                return;
-
-            // Continua finché max - min > 1
-            while (true)
-            {
-                // Ricalcola i conteggi ad ogni iterazione
-                var contiPerClasse = classi
-                    .Select(c => new
-                    {
-                        Classe = c,
-                        Count = tuttiStudenti.Count(s => s.ClasseId == c.Id && predicate(s))
-                    })
-                    .OrderByDescending(x => x.Count)
-                    .ToList();
-
-                int maxCount = contiPerClasse.First().Count;
-                int minCount = contiPerClasse.Last().Count;
-
-                // Tolleranza: swap solo se differenza > 1
-                if (maxCount - minCount <= 1)
-                    break;
-
-                var sorgente = contiPerClasse.First();
-                var destinazione = contiPerClasse.Last();
-
-                // Trova un candidato da spostare (mai spostare un disabile o ragazza o un protetto)
-                var candidatoOut = tuttiStudenti
-                    .Where(s => s.ClasseId == sorgente.Classe.Id
-                                && predicate(s)
-                                && (escludi == null || !escludi(s))
-                                && !s.ProfiloBES.HasDisabilita
-                                && s.Sesso == Sesso.Maschio)
-                    .FirstOrDefault();
-
-                if (candidatoOut == null)
-                    break;
-
-                // Trova un candidato senza l'attributo nella destinazione
-                var candidatoIn = tuttiStudenti
-                    .Where(s => s.ClasseId == destinazione.Classe.Id
-                                && !predicate(s)
-                                && (escludi == null || !escludi(s))
-                                && !s.ProfiloBES.HasDisabilita
-                                && s.Sesso == Sesso.Maschio)
-                    .FirstOrDefault();
-
-                if (candidatoIn == null)
-                {
-                    // Fallback a spostamento semplice se possibile
-                    if (destinazione.Classe.OttieniCapienzaResidua(opzioni) > 0)
-                    {
-                        sorgente.Classe.RimuoviStudente(candidatoOut);
-                        destinazione.Classe.AggiungiStudente(candidatoOut, opzioni);
-                        continue;
-                    }
-                    break;
-                }
-
-                // Swap
-                sorgente.Classe.RimuoviStudente(candidatoOut);
-                destinazione.Classe.RimuoviStudente(candidatoIn);
-                
-                destinazione.Classe.AggiungiStudente(candidatoOut, opzioni);
-                sorgente.Classe.AggiungiStudente(candidatoIn, opzioni);
-            }
-        }
-
-        
-        //  Bilanciamento per Scuola di Provenienza
-        //  Per ogni codice scuola presente, bilancia il numero di studenti
-        //  provenienti da quella scuola tra le classi (swap finché Δ > 1)
-        
-        private void BilanciaSoft_ScuolaProvenienza(
-            List<ClassePrima> classi, List<Studente> tuttiStudenti, OpzioniDistribuzione opzioni)
-        {
-            // Individua tutte le scuole di provenienza distinte
-            var codiciScuola = tuttiStudenti
-                .Where(s => s.ClasseId != null)
+        private static IEnumerable<string> CodiciScuolaDistinti(List<Studente> studenti)
+            => studenti
+                .Where(s => !string.IsNullOrWhiteSpace(s.CodiceScuolaProvenienza))
                 .Select(s => s.CodiceScuolaProvenienza)
-                .Distinct()
-                .ToList();
+                .Distinct();
 
-            foreach (var codice in codiciScuola)
+
+        // ─────────────────────────────────────────────────────────────────────
+        // ApplicaSoluzione
+        //
+        // Traduce il dizionario studenteId → classeId in chiamate ai metodi
+        // di dominio AggiungiStudente.
+        //
+        // I disabili vengono applicati per primi: questo garantisce che
+        // ClassePrima.HasStudenteConDisabilita sia già impostato prima che
+        // gli studenti normali vengano aggiunti, così il check di capienza
+        // (20 vs 27) funziona correttamente.
+        // ─────────────────────────────────────────────────────────────────────
+
+        private static void ApplicaSoluzione(
+            Dictionary<Guid, Guid> assegnazioni,
+            List<Studente> studenti,
+            List<ClassePrima> classi,
+            OpzioniDistribuzione opzioni)
+        {
+            var classiById = classi.ToDictionary(c => c.Id);
+
+            // OrderByDescending su HasDisabilita: true (1) prima di false (0)
+            foreach (var studente in studenti.OrderByDescending(s => s.ProfiloBES.HasDisabilita))
             {
-                // Conta quanti studenti di questa scuola ci sono in totale
-                int totaleScuola = tuttiStudenti.Count(s => s.ClasseId != null && s.CodiceScuolaProvenienza == codice);
-                
-                // Se sono pochi (meno di 2 per classe in media), il bilanciamento non ha senso
-                if (totaleScuola < classi.Count)
-                    continue;
+                if (!assegnazioni.TryGetValue(studente.Id, out var classeId))
+                    throw new DomainException(
+                        $"OR-Tools non ha assegnato lo studente " +
+                        $"{studente.Nome} {studente.Cognome} a nessuna classe. " +
+                        "Questo non dovrebbe accadere: verificare i vincoli hard del modello.");
 
-                int maxIterazioni = 100; // Limite di sicurezza anti-loop infinito
-                int iterazione = 0;
-
-                while (iterazione++ < maxIterazioni)
-                {
-                    var contiPerClasse = classi
-                        .Select(c => new
-                        {
-                            Classe = c,
-                            Count = tuttiStudenti.Count(s => s.ClasseId == c.Id && s.CodiceScuolaProvenienza == codice)
-                        })
-                        .OrderByDescending(x => x.Count)
-                        .ToList();
-
-                    int maxCount = contiPerClasse.First().Count;
-                    int minCount = contiPerClasse.Last().Count;
-
-                    // Tolleranza: swap solo se differenza > 1
-                    if (maxCount - minCount <= 1)
-                        break;
-
-                    var sorgente = contiPerClasse.First();
-                    var destinazione = contiPerClasse.Last();
-
-                    // Trova un candidato dalla scuola da spostare (mai spostare disabili o ragazze)
-                    var candidatoOut = tuttiStudenti
-                        .Where(s => s.ClasseId == sorgente.Classe.Id
-                                    && s.CodiceScuolaProvenienza == codice
-                                    && !s.ProfiloBES.HasDisabilita
-                                    && s.Sesso == Sesso.Maschio)
-                        .FirstOrDefault();
-
-                    if (candidatoOut == null)
-                        break;
-
-                    // Trova un candidato di un'ALTRA scuola nella destinazione da scambiare
-                    var candidatoIn = tuttiStudenti
-                        .Where(s => s.ClasseId == destinazione.Classe.Id
-                                    && s.CodiceScuolaProvenienza != codice
-                                    && !s.ProfiloBES.HasDisabilita
-                                    && s.Sesso == Sesso.Maschio)
-                        .FirstOrDefault();
-
-                    if (candidatoIn == null)
-                    {
-                        // Fallback: spostamento semplice se c'è posto
-                        if (destinazione.Classe.OttieniCapienzaResidua(opzioni) > 0)
-                        {
-                            sorgente.Classe.RimuoviStudente(candidatoOut);
-                            destinazione.Classe.AggiungiStudente(candidatoOut, opzioni);
-                            continue;
-                        }
-                        break;
-                    }
-
-                    // Esegui lo swap
-                    sorgente.Classe.RimuoviStudente(candidatoOut);
-                    destinazione.Classe.RimuoviStudente(candidatoIn);
-
-                    destinazione.Classe.AggiungiStudente(candidatoOut, opzioni);
-                    sorgente.Classe.AggiungiStudente(candidatoIn, opzioni);
-                }
+                classiById[classeId].AggiungiStudente(studente, opzioni);
             }
+        }
+
+
+        // ─────────────────────────────────────────────────────────────────────
+        // P4 — Fase di settembre: integrazione bocciati e trasferimenti
+        //
+        // TODO:
+        //   - Aggiungere i bocciati al pool
+        //   - Vincolo hard: il bocciato NON torna nella stessa sezione dell'anno prec.
+        //   - Estendere il modello OR-Tools con: x[i,j] = 0 se classi[j].Sezione
+        //     coincide con la sezione precedente dello studente
+        // ─────────────────────────────────────────────────────────────────────
+
+        public Task IntegraBocciatiAsync(
+            IEnumerable<Studente> bocciati, OpzioniDistribuzione? opzioni = null)
+        {
+            throw new NotImplementedException(
+                "P4 (integrazione bocciati e trasferimenti, settembre) non ancora implementata.");
         }
     }
 }

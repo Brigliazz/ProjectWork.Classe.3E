@@ -74,6 +74,23 @@ else
     Console.WriteLine();
 }
 
+// ─── 2b. RICHIESTA PREFERENZE ─────────────────────────────────────
+Console.Write("Vuoi attivare il matching delle preferenze compagno? (s/n, default s): ");
+string? rispPref = Console.ReadLine()?.Trim().ToLower();
+if (rispPref == "n" || rispPref == "no")
+{
+    opzioni.UsaPreferenze = false;
+    Console.WriteLine("ℹ️  Preferenze disattivate.");
+}
+else
+{
+    opzioni.UsaPreferenze = true;
+    Console.ForegroundColor = ConsoleColor.Green;
+    Console.WriteLine("✅ Preferenze attivate — il matcher fuzzy verrà eseguito.");
+    Console.ResetColor();
+}
+Console.WriteLine();
+
 // ─── 3. SETUP REPOSITORY IN-MEMORY ────────────────────────────────
 var studenteRepo = new InMemoryStudenteRepository();
 var classeRepo = new InMemoryClasseRepository();
@@ -94,7 +111,7 @@ string[] scuoleProvenienza = { "MIIS00100A", "MIIS00200B", "MIIS00300C", "MIIS00
 
 Studente CreaStudente(string nome, string cognome, Sesso sesso,
     bool hasDisabilita = false, bool hasDSA = false, bool isStraniero = false,
-    int? votoEsame = null, string? codiceScuola = null)
+    int? votoEsame = null, string? codiceScuola = null, SceltaCompagno? sceltaCompagno = null)
 {
     cfCounter++;
     var cittadinanza = isStraniero ? Cittadinanza.Crea(100) : Cittadinanza.Italiana;
@@ -108,12 +125,35 @@ Studente CreaStudente(string nome, string cognome, Sesso sesso,
         codiceScuola ?? "MIIS00100A",
         profiloBES,
         faReligione: true,
-        votoEsame: votoEsame);
+        votoEsame: votoEsame,
+        sceltaCompagno: sceltaCompagno);
 }
 
 // Generazione automatica con percentuali realistiche
 int numFemmine = (int)(totaleStudenti * 0.13);
 int numDisabili = Math.Min((int)(totaleStudenti * 0.03), numSezioni); // max 1 per classe
+
+// ─── 5b. PREFERENZE DI TEST ───────────────────────────────────────
+// Prepara le preferenze da assegnare durante la creazione degli studenti.
+// Le preferenze fanno riferimento ad altri studenti per nome/cognome.
+// Poiché i nomi sono deterministici ("NomeN", "CognomeN"), possiamo prefabbricarle.
+int prefAssegnate = 0;
+var preferenzePerIndice = new Dictionary<int, SceltaCompagno>();
+
+if (opzioni.UsaPreferenze && totaleStudenti >= 10)
+{
+    // Studente 0 preferisce Studente 1 (match esatto → Certo)
+    preferenzePerIndice[0] = SceltaCompagno.Crea("Nome2 Cognome2");
+    // Studente 2 preferisce Studente 3 con errore di battitura (match fuzzy)
+    preferenzePerIndice[2] = SceltaCompagno.Crea("Nome4 Cognome4xx");
+    // Studente 4 preferisce Studente 5 con nome invertito
+    preferenzePerIndice[4] = SceltaCompagno.Crea("Cognome6 Nome6");
+    // Studente 6 scrive "nessuno"
+    preferenzePerIndice[6] = SceltaCompagno.Crea("nessuno");
+    // Studente 8 con testo irriconoscibile
+    preferenzePerIndice[8] = SceltaCompagno.Crea("zzzzxxx qqqqqqq");
+    prefAssegnate = preferenzePerIndice.Count;
+}
 
 var studenti = new List<Studente>();
 for (int i = 0; i < totaleStudenti; i++)
@@ -123,6 +163,8 @@ for (int i = 0; i < totaleStudenti; i++)
     bool isDSA = (i % 15 == 0 && !isDisabile);
     bool isStraniero = (i % 20 == 2);
 
+    preferenzePerIndice.TryGetValue(i, out var sceltaCompagno);
+
     studenti.Add(CreaStudente(
         $"Nome{i + 1}",
         $"Cognome{i + 1}",
@@ -131,7 +173,8 @@ for (int i = 0; i < totaleStudenti; i++)
         hasDSA: isDSA,
         isStraniero: isStraniero,
         votoEsame: (i % 5) + 6,
-        codiceScuola: scuoleProvenienza[i % scuoleProvenienza.Length]));
+        codiceScuola: scuoleProvenienza[i % scuoleProvenienza.Length],
+        sceltaCompagno: sceltaCompagno));
 }
 
 foreach (var s in studenti)
@@ -143,6 +186,8 @@ Console.WriteLine($"   • {numDisabili} con disabilità (3%, max 1/classe)");
 Console.WriteLine($"   • {studenti.Count(s => s.ProfiloBES.HasDSA)} con DSA");
 Console.WriteLine($"   • {studenti.Count(s => s.IsStraniero)} stranieri");
 Console.WriteLine($"   • Da {scuoleProvenienza.Length} scuole di provenienza diverse");
+if (prefAssegnate > 0)
+    Console.WriteLine($"   • {prefAssegnate} preferenze compagno di test assegnate");
 Console.WriteLine();
 
 // ─── 6. ESECUZIONE DISTRIBUZIONE ──────────────────────────────────
@@ -159,6 +204,33 @@ try
     Console.WriteLine("✅ Distribuzione completata!");
     Console.ResetColor();
     Console.WriteLine();
+
+    // ─── 6b. REPORT MATCH PREFERENZE ──────────────────────────────
+    if (opzioni.UsaPreferenze && service.MatchIncerti.Count > 0)
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("╔══════════════════════════════════════════════════════════════════════════════════════╗");
+        Console.WriteLine("║   MATCH INCERTI — REVISIONE RICHIESTA                                             ║");
+        Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════════════╝");
+        Console.ResetColor();
+        Console.WriteLine();
+
+        foreach (var m in service.MatchIncerti)
+        {
+            Console.WriteLine($"  ⚠️  {m.Richiedente.Nome} {m.Richiedente.Cognome}");
+            Console.WriteLine($"      Testo: \"{m.TestoOriginale}\"");
+            Console.WriteLine($"      Candidato: {m.CandidatoTrovato?.Nome} {m.CandidatoTrovato?.Cognome} (score: {m.Score})");
+            Console.WriteLine($"      → {m.Messaggio}");
+            Console.WriteLine();
+        }
+    }
+    else if (opzioni.UsaPreferenze)
+    {
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine("✅ Nessun match incerto — tutte le preferenze sono state risolte automaticamente.");
+        Console.ResetColor();
+        Console.WriteLine();
+    }
 
     // ─── 7. REPORT TABELLARE ──────────────────────────────────────
     var classi = await classeRepo.GetAllAsync();

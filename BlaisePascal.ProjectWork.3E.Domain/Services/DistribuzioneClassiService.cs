@@ -49,26 +49,31 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             if (studenti.Count == 0)
                 return new List<List<Studente>>();
 
-            //  PreferenzaMatcher: analisi fuzzy delle preferenze 
-            _matchIncerti.Clear();
-            var risultatiMatch = _preferenzaMatcher.Analizza(studenti);
+            //  PreferenzaMatcher: analisi fuzzy delle preferenze
+            var coppiePreferenze = new List<(int IdxI, int IdxJ)>();
 
-            // Log dei NessunMatch (utile per debug)
-            foreach (var r in risultatiMatch.Where(r => r.Categoria == CategoriaMatch.NessunMatch))
-                Console.WriteLine($"[PreferenzaMatcher] {r.Messaggio}");
+            if (opzioni.UsaPreferenze)
+            {
+                _matchIncerti.Clear();
+                var risultatiMatch = _preferenzaMatcher.Analizza(studenti);
 
-            // Gli incerti vengono salvati per la UI
-            _matchIncerti.AddRange(risultatiMatch.Where(r => r.Categoria == CategoriaMatch.Incerto));
+                // Log dei NessunMatch (utile per debug)
+                foreach (var r in risultatiMatch.Where(r => r.Categoria == CategoriaMatch.NessunMatch))
+                    Console.WriteLine($"[PreferenzaMatcher] {r.Messaggio}");
 
-            // Solo i certi entrano nel modello OR-Tools
-            var coppiePreferenze = risultatiMatch
-                .Where(r => r.Categoria == CategoriaMatch.Certo && r.CandidatoTrovato != null)
-                .Select(r => (
-                    IdxI: studenti.IndexOf(r.Richiedente),
-                    IdxJ: studenti.IndexOf(r.CandidatoTrovato!)
-                ))
-                .Where(p => p.IdxI >= 0 && p.IdxJ >= 0)
-                .ToList();
+                // Gli incerti vengono salvati per la UI
+                _matchIncerti.AddRange(risultatiMatch.Where(r => r.Categoria == CategoriaMatch.Incerto));
+
+                // Solo i certi entrano nel modello OR-Tools
+                coppiePreferenze = risultatiMatch
+                    .Where(r => r.Categoria == CategoriaMatch.Certo && r.CandidatoTrovato != null)
+                    .Select(r => (
+                        IdxI: studenti.IndexOf(r.Richiedente),
+                        IdxJ: studenti.IndexOf(r.CandidatoTrovato!)
+                    ))
+                    .Where(p => p.IdxI >= 0 && p.IdxJ >= 0)
+                    .ToList();
+            }
 
             // Risolvi il problema di assegnazione con OR-Tools CP-SAT
             var assegnazioni = RisolviConOrTools(studenti, classi, opzioni, coppiePreferenze);

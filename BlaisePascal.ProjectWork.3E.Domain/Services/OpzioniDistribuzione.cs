@@ -13,6 +13,8 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
 
         public bool ConsentiSforo { get; set; } = false;
 
+        public bool UsaPreferenze { get; set; } = true;
+
         public Dictionary<string, int> SezioniPerIndirizzo { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
         public static OpzioniDistribuzione Default => new OpzioniDistribuzione();

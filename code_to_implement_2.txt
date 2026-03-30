@@ -1,0 +1,100 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// PATCH per DistribuzioneClassiService.cs
+//
+// Sostituisce il metodo PreferenzeCoppie() statico con una versione che
+// usa PreferenzaMatcher. Incolla queste modifiche nel file esistente.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── 1. Aggiungi il campo al costruttore ──────────────────────────────────────
+//
+// Nel costruttore della classe, aggiungi il parametro opzionale:
+//
+//   private readonly PreferenzaMatcher _preferenzaMatcher;
+//
+//   public DistribuzioneClassiService(
+//       IStudenteRepository studenteRepository,
+//       IClasseRepository classeRepository,
+//       OpzioniMatcher? opzioniMatcher = null)          // ← aggiunto
+//   {
+//       _studenteRepository  = studenteRepository;
+//       _classeRepository    = classeRepository;
+//       _preferenzaMatcher   = new PreferenzaMatcher(opzioniMatcher);  // ← aggiunto
+//   }
+
+
+// ── 2. Aggiungi la proprietà pubblica per esporre i match incerti ─────────────
+//
+// Questa lista viene popolata durante DistribuisciAsync() e può essere
+// letta dall'interfaccia WPF/MAUI dopo la chiamata per mostrare la UI
+// di revisione umana.
+//
+//   public IReadOnlyList<RisultatoMatch> MatchIncerti =>
+//       _matchIncerti.AsReadOnly();
+//
+//   private readonly List<RisultatoMatch> _matchIncerti = new();
+
+
+// ── 3. Aggiorna DistribuisciAsync() ──────────────────────────────────────────
+//
+// Prima della chiamata a RisolviConOrTools(), aggiungi:
+//
+//   _matchIncerti.Clear();
+//   var risultatiMatch = _preferenzaMatcher.Analizza(studenti);
+//
+//   // Log dei NessunMatch (utile per debug)
+//   foreach (var r in risultatiMatch.Where(r => r.Categoria == CategoriaMatch.NessunMatch))
+//       Console.WriteLine($"[PreferenzaMatcher] {r.Messaggio}");
+//
+//   // Gli incerti vengono salvati per la UI
+//   _matchIncerti.AddRange(risultatiMatch.Where(r => r.Categoria == CategoriaMatch.Incerto));
+//
+//   // Solo i certi entrano nel modello OR-Tools
+//   var coppiePreferenze = risultatiMatch
+//       .Where(r => r.Categoria == CategoriaMatch.Certo && r.CandidatoTrovato != null)
+//       .Select(r => (
+//           IdxI: studenti.IndexOf(r.Richiedente),
+//           IdxJ: studenti.IndexOf(r.CandidatoTrovato!)
+//       ))
+//       .Where(p => p.IdxI >= 0 && p.IdxJ >= 0)
+//       .ToList();
+//
+// Poi passa coppiePreferenze a RisolviConOrTools() come parametro aggiuntivo.
+
+
+// ── 4. Sostituisci il metodo PreferenzeCoppie() ───────────────────────────────
+//
+// Il metodo statico originale viene eliminato e sostituito da questo,
+// che accetta le coppie già calcolate invece di ricalcolarle:
+
+/*
+private static IEnumerable<(int idxI, int idxJ)> PreferenzeCoppie(
+    List<(int IdxI, int IdxJ)> coppiePreferenze)
+{
+    return coppiePreferenze;
+}
+*/
+
+// In alternativa, aggiorna direttamente RisolviConOrTools() aggiungendo
+// il parametro List<(int,int)> coppiePreferenze e sostituendo la chiamata
+// a PreferenzeCoppie(studenti, n) con coppiePreferenze.
+
+
+// ── 5. Firma aggiornata di RisolviConOrTools() ───────────────────────────────
+
+/*
+private static Dictionary<Guid, Guid> RisolviConOrTools(
+    List<Studente> studenti,
+    List<ClassePrima> classi,
+    OpzioniDistribuzione opzioni,
+    List<(int IdxI, int IdxJ)> coppiePreferenze)  // ← parametro aggiunto
+{
+    // ... tutto il codice invariato ...
+
+    // Nella sezione "Preferenze SceltaCompagno", sostituisci:
+    //   foreach (var (pi, pj) in PreferenzeCoppie(studenti, n))
+    // con:
+    //   foreach (var (pi, pj) in coppiePreferenze)
+
+    // ... resto del codice invariato ...
+}
+*/

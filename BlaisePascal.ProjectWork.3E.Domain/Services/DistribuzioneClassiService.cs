@@ -1,7 +1,6 @@
-// ═══════════════════════════════════════════════════════════════════════════════
 // PREREQUISITO: aggiungere il pacchetto NuGet al progetto prima di compilare
 //   dotnet add package Google.OrTools
-// ═══════════════════════════════════════════════════════════════════════════════
+
 
 using Google.OrTools.Sat;
 using BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima;
@@ -16,18 +15,25 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
     {
         private readonly IStudenteRepository _studenteRepository;
         private readonly IClasseRepository   _classeRepository;
+        private readonly PreferenzaMatcher   _preferenzaMatcher;
+
+        public IReadOnlyList<RisultatoMatch> MatchIncerti =>
+            _matchIncerti.AsReadOnly();
+
+        private readonly List<RisultatoMatch> _matchIncerti = new();
 
         public DistribuzioneClassiService(
             IStudenteRepository studenteRepository,
-            IClasseRepository classeRepository)
+            IClasseRepository classeRepository,
+            OpzioniMatcher? opzioniMatcher = null)
         {
-            _studenteRepository = studenteRepository;
-            _classeRepository   = classeRepository;
+            _studenteRepository  = studenteRepository;
+            _classeRepository    = classeRepository;
+            _preferenzaMatcher   = new PreferenzaMatcher(opzioniMatcher);
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // Entry point pubblico
-        // ─────────────────────────────────────────────────────────────────────
+        //  Entry point pubblico
+        
 
         public async Task<List<List<Studente>>> DistribuisciAsync(
             OpzioniDistribuzione? opzioni = null)
@@ -43,8 +49,29 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             if (studenti.Count == 0)
                 return new List<List<Studente>>();
 
+            //  PreferenzaMatcher: analisi fuzzy delle preferenze 
+            _matchIncerti.Clear();
+            var risultatiMatch = _preferenzaMatcher.Analizza(studenti);
+
+            // Log dei NessunMatch (utile per debug)
+            foreach (var r in risultatiMatch.Where(r => r.Categoria == CategoriaMatch.NessunMatch))
+                Console.WriteLine($"[PreferenzaMatcher] {r.Messaggio}");
+
+            // Gli incerti vengono salvati per la UI
+            _matchIncerti.AddRange(risultatiMatch.Where(r => r.Categoria == CategoriaMatch.Incerto));
+
+            // Solo i certi entrano nel modello OR-Tools
+            var coppiePreferenze = risultatiMatch
+                .Where(r => r.Categoria == CategoriaMatch.Certo && r.CandidatoTrovato != null)
+                .Select(r => (
+                    IdxI: studenti.IndexOf(r.Richiedente),
+                    IdxJ: studenti.IndexOf(r.CandidatoTrovato!)
+                ))
+                .Where(p => p.IdxI >= 0 && p.IdxJ >= 0)
+                .ToList();
+
             // Risolvi il problema di assegnazione con OR-Tools CP-SAT
-            var assegnazioni = RisolviConOrTools(studenti, classi, opzioni);
+            var assegnazioni = RisolviConOrTools(studenti, classi, opzioni, coppiePreferenze);
 
             // Applica la soluzione agli oggetti di dominio attraverso i loro metodi
             ApplicaSoluzione(assegnazioni, studenti, classi, opzioni);
@@ -60,9 +87,8 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                 .ToList();
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // Generazione classi (logica invariata rispetto all'originale)
-        // ─────────────────────────────────────────────────────────────────────
+        //  Generazione classi (logica invariata rispetto all'originale)
+        
 
         private async Task<List<ClassePrima>> GeneraClassiAsync(OpzioniDistribuzione opzioni)
         {
@@ -105,8 +131,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             return classi;
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // OR-Tools CP-SAT — costruzione e risoluzione del modello
+        //  OR-Tools CP-SAT — costruzione e risoluzione del modello
         //
         // STRUTTURA DEL MODELLO:
         //   Variabili : x[i,j] = BoolVar, vale 1 se lo studente i va nella classe j
@@ -122,16 +147,17 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         //     • Minimizza lo sbilanciamento per scuola di provenienza
         //
         // Ritorna: dizionario studenteId → classeId
-        // ─────────────────────────────────────────────────────────────────────
+        
 
         private static Dictionary<Guid, Guid> RisolviConOrTools(
-            List<Studente> studenti, List<ClassePrima> classi, OpzioniDistribuzione opzioni)
+            List<Studente> studenti, List<ClassePrima> classi, OpzioniDistribuzione opzioni,
+            List<(int IdxI, int IdxJ)> coppiePreferenze)
         {
             var model = new CpModel();
             int n = studenti.Count;
             int m = classi.Count;
 
-            // ── Variabili di decisione ──────────────────────────────────────
+            //  Variabili di decisione 
             // x[i,j] = 1  ⟺  studente[i] è assegnato alla classe[j]
             var x = new BoolVar[n, m];
             for (int i = 0; i < n; i++)
@@ -139,13 +165,13 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                     x[i, j] = model.NewBoolVar($"x_{i}_{j}");
 
 
-            // ── VINCOLO HARD: ogni studente in esattamente una classe ────────
+            //  VINCOLO HARD: ogni studente in esattamente una classe 
             for (int i = 0; i < n; i++)
                 model.AddExactlyOne(
                     Enumerable.Range(0, m).Select(j => (ILiteral)x[i, j]).ToArray());
 
 
-            // ── Precalcolo degli indici per categoria ───────────────────────
+            //  Precalcolo degli indici per categoria 
             var disabiliIdx  = IndiciStudenti(studenti, s => s.ProfiloBES.HasDisabilita);
             var ragazzeIdx   = IndiciStudenti(studenti, s => s.Sesso == Sesso.Femmina);
             var stranieriIdx = IndiciStudenti(studenti, s => s.IsStraniero);
@@ -154,7 +180,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             var eccIdx       = IndiciStudenti(studenti, s => s.IsEccellenza);
 
 
-            // ── VINCOLI HARD P1: capienza e limite disabili ─────────────────
+            //  VINCOLI HARD P1: capienza e limite disabili 
             //
             // Il delta è la differenza tra il limite standard e quello con disabili (27-20=7).
             // Modellazione della capienza condizionale:
@@ -206,7 +232,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             }
 
 
-            // ── VINCOLO HARD: max 30% stranieri per classe ──────────────────
+            //  VINCOLO HARD: max 30% stranieri per classe 
             //
             // NOTA: il vincolo esatto sarebbe Σ_stranieri / Σ_tutti ≤ 0.30,
             // ma è nonlineare perché anche il denominatore è variabile.
@@ -224,7 +250,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             }
 
 
-            // ── FUNZIONE OBIETTIVO ───────────────────────────────────────────
+            //  FUNZIONE OBIETTIVO 
             //
             // Ogni termine ha la forma (IntVar, peso).
             // Il solver minimizza Σ(var * peso).
@@ -285,7 +311,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             //   inSameClass  = OR(together[k])  →  1 se nella stessa classe
             //   notTogether  = NOT(inSameClass)  →  penalizzato in obiettivo
 
-            foreach (var (pi, pj) in PreferenzeCoppie(studenti, n))
+            foreach (var (pi, pj) in coppiePreferenze)
             {
                 var togetherK = new BoolVar[m];
                 for (int k = 0; k < m; k++)
@@ -334,7 +360,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                 objVars.ToArray(), objWeights.ToArray()));
 
 
-            // ── Risoluzione ─────────────────────────────────────────────────
+            //  Risoluzione 
             var solver = new CpSolver();
             // 30 secondi di timeout; 4 thread paralleli per convergenza più rapida
             solver.StringParameters = "max_time_in_seconds:30.0 num_search_workers:4";
@@ -348,7 +374,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                     "disponibili (es. abbastanza classi per i disabili, stranieri < 30%).");
 
 
-            // ── Estrazione soluzione ─────────────────────────────────────────
+            //  Estrazione soluzione 
             var result = new Dictionary<Guid, Guid>(n);
             for (int i = 0; i < n; i++)
                 for (int j = 0; j < m; j++)
@@ -362,8 +388,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         }
 
 
-        // ─────────────────────────────────────────────────────────────────────
-        // PenalitaBilancio
+        //  PenalitaBilancio
         //
         // Crea nel modello una variabile intera che rappresenta
         // max(count_j) − min(count_j),  dove count_j = numero di studenti
@@ -371,7 +396,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         //
         // Questa variabile viene poi aggiunta all'obiettivo con un peso:
         // il solver la spinge verso 0, cioè verso distribuzione uniforme.
-        // ─────────────────────────────────────────────────────────────────────
+        
 
         private static IntVar PenalitaBilancio(
             CpModel model, BoolVar[,] x, int n, int m,
@@ -397,9 +422,8 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         }
 
 
-        // ─────────────────────────────────────────────────────────────────────
-        // IndiciStudenti — ritorna gli indici nella lista dove il predicato è vero
-        // ─────────────────────────────────────────────────────────────────────
+        //  IndiciStudenti — ritorna gli indici nella lista dove il predicato è vero
+        
 
         private static List<int> IndiciStudenti(
             List<Studente> studenti, Func<Studente, bool> pred)
@@ -410,46 +434,14 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                 .ToList();
 
 
-        // ─────────────────────────────────────────────────────────────────────
-        // PreferenzeCoppie — matching fuzzy su SceltaCompagno.Testo
-        //
-        // Cerca, per ogni studente con una preferenza espressa, uno studente
-        // nella lista il cui nome/cognome corrisponda al testo libero indicato.
-        // ─────────────────────────────────────────────────────────────────────
-
-        private static IEnumerable<(int idxI, int idxJ)> PreferenzeCoppie(
-            List<Studente> studenti, int n)
-        {
-            for (int i = 0; i < n; i++)
-            {
-                if (studenti[i].SceltaCompagno is not { } sc) continue;
-
-                // SceltaCompagno espone la proprietà "Testo" (vedi SceltaCompagno.cs)
-                string desiderato = sc.Testo;
-
-                for (int j = 0; j < n; j++)
-                {
-                    if (i == j) continue;
-                    var s = studenti[j];
-
-                    bool match =
-                        desiderato.Contains($"{s.Nome} {s.Cognome}",    StringComparison.OrdinalIgnoreCase) ||
-                        desiderato.Contains($"{s.Cognome} {s.Nome}",    StringComparison.OrdinalIgnoreCase) ||
-                        desiderato.Contains(s.Cognome,                   StringComparison.OrdinalIgnoreCase);
-
-                    if (match)
-                    {
-                        yield return (i, j);
-                        break; // una preferenza per studente
-                    }
-                }
-            }
-        }
+        //  PreferenzeCoppie — ora gestita da PreferenzaMatcher
+        // (il vecchio metodo statico è stato sostituito)
+        
 
 
-        // ─────────────────────────────────────────────────────────────────────
+           
         // CodiciScuolaDistinti — codici meccanografici presenti nel pool
-        // ─────────────────────────────────────────────────────────────────────
+        
 
         private static IEnumerable<string> CodiciScuolaDistinti(List<Studente> studenti)
             => studenti
@@ -458,8 +450,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                 .Distinct();
 
 
-        // ─────────────────────────────────────────────────────────────────────
-        // ApplicaSoluzione
+        //  ApplicaSoluzione
         //
         // Traduce il dizionario studenteId → classeId in chiamate ai metodi
         // di dominio AggiungiStudente.
@@ -468,7 +459,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         // ClassePrima.HasStudenteConDisabilita sia già impostato prima che
         // gli studenti normali vengano aggiunti, così il check di capienza
         // (20 vs 27) funziona correttamente.
-        // ─────────────────────────────────────────────────────────────────────
+        
 
         private static void ApplicaSoluzione(
             Dictionary<Guid, Guid> assegnazioni,
@@ -492,15 +483,14 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         }
 
 
-        // ─────────────────────────────────────────────────────────────────────
-        // P4 — Fase di settembre: integrazione bocciati e trasferimenti
+        //  P4 — Fase di settembre: integrazione bocciati e trasferimenti
         //
         // TODO:
         //   - Aggiungere i bocciati al pool
         //   - Vincolo hard: il bocciato NON torna nella stessa sezione dell'anno prec.
         //   - Estendere il modello OR-Tools con: x[i,j] = 0 se classi[j].Sezione
         //     coincide con la sezione precedente dello studente
-        // ─────────────────────────────────────────────────────────────────────
+        
 
         public Task IntegraBocciatiAsync(
             IEnumerable<Studente> bocciati, OpzioniDistribuzione? opzioni = null)

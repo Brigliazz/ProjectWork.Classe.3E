@@ -57,15 +57,10 @@ namespace BlaisePascal.ProjectWork3E.Wpf
 
             MessageBox.Show($"Percorso file copiato con successo nella variabile!\n\nPercorso: {importedFilePath}", "Verifica Importazione", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-
-        private void BtnGenera_Click(object sender, RoutedEventArgs e)
-        {
-
-        }
-
         private void BtnDownload_Click(object sender, RoutedEventArgs e)
         {
 
         }
+
     }
 }

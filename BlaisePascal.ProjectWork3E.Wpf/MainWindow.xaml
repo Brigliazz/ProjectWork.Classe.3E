@@ -1,7 +1,7 @@
 <Window x:Class="BlaisePascal.ProjectWork3E.Wpf.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="Generatore Classi Prime" Height="650" Width="600"
+    Title="Generatore Classi Prime" Height="680" Width="620"
     WindowStartupLocation="CenterScreen" Background="#f8fafc" FontFamily="Segoe UI">
 
     <Window.Resources>
@@ -59,7 +59,7 @@
     </Window.Resources>
 
     <Grid>
-        <Border Background="#ffffff" MaxWidth="500" VerticalAlignment="Center" HorizontalAlignment="Stretch" 
+        <Border Background="#ffffff" MaxWidth="520" VerticalAlignment="Center" HorizontalAlignment="Stretch" 
             CornerRadius="12" Padding="40" Margin="40">
             <Border.Effect>
                 <DropShadowEffect Color="#0f172a" Opacity="0.08" BlurRadius="20" ShadowDepth="4"/>
@@ -92,7 +92,7 @@
                 </StackPanel>
 
                 <StackPanel Margin="0,0,0,28">
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                         <Border Background="#e0e7ff" CornerRadius="12" Width="24" Height="24" Margin="0,0,8,0">
                             <TextBlock Text="2" Foreground="#4f46e5" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -100,28 +100,48 @@
                     </StackPanel>
 
                     <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="12"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="1.2*"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left">
-                            <TextBlock Text="Numero Classi:" VerticalAlignment="Center" Foreground="#475569" FontWeight="SemiBold" Margin="0,0,8,0"/>
-                            <Border Background="#f8fafc" BorderBrush="#cbd5e1" BorderThickness="1" CornerRadius="8" Width="50" Height="42">
-                                <TextBox x:Name="TxtNumeroClassi" Text="1" FontSize="14" FontWeight="SemiBold" TextAlignment="Center"
-                                         Background="Transparent" BorderThickness="0" Foreground="#334155" 
-                                         VerticalContentAlignment="Center" HorizontalContentAlignment="Center"/>
-                            </Border>
+                        <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                            <TextBlock Text="Gestione numero classi:" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,12"/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                    <TextBlock Text="Informatica" FontSize="11" Foreground="#64748b" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                                    <Border Background="#f8fafc" BorderBrush="#cbd5e1" BorderThickness="1" CornerRadius="8" Height="38">
+                                        <TextBox x:Name="TxtClassiInformatica" Text="1" FontSize="14" FontWeight="SemiBold" TextAlignment="Center"
+                                                 Background="Transparent" BorderThickness="0" Foreground="#334155" VerticalContentAlignment="Center"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Margin="3,0,3,0">
+                                    <TextBlock Text="Elettronica" FontSize="11" Foreground="#64748b" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                                    <Border Background="#f8fafc" BorderBrush="#cbd5e1" BorderThickness="1" CornerRadius="8" Height="38">
+                                        <TextBox x:Name="TxtClassiElettronica" Text="1" FontSize="14" FontWeight="SemiBold" TextAlignment="Center"
+                                                 Background="Transparent" BorderThickness="0" Foreground="#334155" VerticalContentAlignment="Center"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" Margin="6,0,0,0">
+                                    <TextBlock Text="Biotecn." FontSize="11" Foreground="#64748b" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                                    <Border Background="#f8fafc" BorderBrush="#cbd5e1" BorderThickness="1" CornerRadius="8" Height="38">
+                                        <TextBox x:Name="TxtClassiBiotecnologie" Text="1" FontSize="14" FontWeight="SemiBold" TextAlignment="Center"
+                                                 Background="Transparent" BorderThickness="0" Foreground="#334155" VerticalContentAlignment="Center"/>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
                         </StackPanel>
 
-                        <Button x:Name="BtnImport" Grid.Row="0" Grid.Column="2" Content="Importa" MinHeight="42" 
+                        <Button x:Name="BtnImport" Grid.Column="1" Content="Importa" MinHeight="42" VerticalAlignment="Bottom"
                                 Style="{StaticResource SecondaryButton}" Click="BtnImport_Click"/>
                     </Grid>
 
@@ -139,12 +159,8 @@
                         </Border>
                         <TextBlock Text="Risultati" Style="{StaticResource StepLabel}"/>
                     </StackPanel>
-
-                    <Button x:Name="BtnGenera" Content="Genera Classi" MinHeight="42" Margin="0,0,0,12" 
-                            Style="{StaticResource PrimaryButton}" Click="BtnGenera_Click"/>
-
                     <Button x:Name="BtnDownload" Content="Scarica Risultati" MinHeight="42" 
-                            Style="{StaticResource SecondaryButton}" Click="BtnDownload_Click"/>
+                            Style="{StaticResource SecondaryButton}"/>
                 </StackPanel>
 
             </StackPanel>

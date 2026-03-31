@@ -27,6 +27,32 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
 
             command.ExecuteNonQuery();
         }
+        public static ScuolaProvImportDto LeggiScuola(int id)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText =
+            @"
+            SELECT * FROM ScuolaProvenienza WHERE Id = @id
+            ";
+            command.Parameters.AddWithValue("@id", id);
+
+            var reader = command.ExecuteReader();
+            if (reader.Read())
+            {
+                return new ScuolaProvImportDto
+                {
+                    Id = reader.GetInt32(0),
+                    CodiceScuola = reader.GetString(1),
+                    DenominazioneScuola = reader.GetString(2),
+                    ComuneScuola = reader.GetString(3),
+                    CodiceFiscaleStudente = reader.GetString(4)
+                };
+            }
+            return null;
+        }
         public static void SvuotaTabella()
         {
             using var connection = new SqliteConnection(connectionString);

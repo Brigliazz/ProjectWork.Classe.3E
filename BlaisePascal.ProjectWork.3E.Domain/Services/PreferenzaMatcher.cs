@@ -6,74 +6,10 @@
 using System.Text.RegularExpressions;
 using FuzzySharp;
 using BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente;
+using static BlaisePascal.ProjectWork._3E.Domain.Services.Categorie;
 
 namespace BlaisePascal.ProjectWork._3E.Domain.Services
 {
-    
-    // OpzioniMatcher
-    //
-    // Soglie configurabili per la classificazione dei match.
-    // I valori di default sono conservativi per minimizzare i falsi positivi.
-    
-
-    public class OpzioniMatcher
-    {
-        // Score FuzzySharp (0–100) sopra il quale il match è considerato certo
-        public int SogliaMatchCerto    { get; set; } = 90;
-
-        // Score tra SogliaMatchIncerto e SogliaMatchCerto → richiede revisione umana
-        public int SogliaMatchIncerto  { get; set; } = 70;
-
-        // Istanza di default
-        public static OpzioniMatcher Default => new();
-    }
-
-
-     
-    // Enumerazione delle tre categorie di esito
-    
-
-    public enum CategoriaMatch
-    {
-        Certo,      // score ≥ SogliaMatchCerto   → entra automaticamente in OR-Tools
-        Incerto,    // SogliaMatchIncerto ≤ score < SogliaMatchCerto → revisione umana
-        NessunMatch // score < SogliaMatchIncerto  → scartato, loggato
-    }
-
-
-     
-    // RisultatoMatch
-    //
-    // Rappresenta il risultato del tentativo di matching per UNA preferenza
-    // espressa da uno studente richiedente.
-    
-
-    public sealed class RisultatoMatch
-    {
-        // Lo studente che ha espresso la preferenza
-        public Studente Richiedente        { get; init; } = null!;
-
-        // Il testo originale grezzo dal campo "Scelta compagno/a"
-        public string   TestoOriginale     { get; init; } = string.Empty;
-
-        // Il segmento normalizzato usato per il matching (dopo pulizia)
-        public string   SegmentoNormalizzato { get; init; } = string.Empty;
-
-        // Il candidato trovato nel pool (null se NessunMatch)
-        public Studente? CandidatoTrovato  { get; init; }
-
-        // Score FuzzySharp (0–100)
-        public int      Score              { get; init; }
-
-        // Categoria risultante
-        public CategoriaMatch Categoria    { get; init; }
-
-        // Messaggio descrittivo utile per il log / UI di revisione
-        public string   Messaggio          { get; init; } = string.Empty;
-    }
-
-
-     
     // PreferenzaMatcher
     //
     // Responsabilità unica: dato il pool di studenti, analizza il campo
@@ -84,8 +20,6 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
     // DistribuzioneClassiService.PreferenzeCoppie(), che ora consumerà
     // solo i RisultatoMatch con Categoria == Certo.
     // I match Incerti vengono esposti all'interfaccia per revisione umana.
-    
-
     public class PreferenzaMatcher
     {
         private readonly OpzioniMatcher _opzioni;
@@ -94,8 +28,6 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         {
             _opzioni = opzioni ?? OpzioniMatcher.Default;
         }
-
-
         //  Entry point 
         // Processa tutti gli studenti del pool e restituisce la lista
         // completa dei risultati, una voce per ogni segmento di preferenza
@@ -157,7 +89,6 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
 
             return risultati;
         }
-
 
         //  Step 1 — Fix encoding 
         // Tenta di reinterpretare il testo come UTF-8 mal decodificato come Latin-1.

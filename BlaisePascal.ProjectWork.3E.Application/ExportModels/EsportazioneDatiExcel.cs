@@ -100,7 +100,7 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
                     classeNum++;
                 }
 
-                // Salvataggio su desktop del file con solo le informazioni base(elenco co nome e cognome)
+                // Salvataggio su desktop del file con solo le informazioni base(elenco con nome e cognome)
                 string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
                 string percorso = Path.Combine(desktop, "Classibase.xlsx");
                 package.SaveAs(new FileInfo(percorso));

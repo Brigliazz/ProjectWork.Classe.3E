@@ -6,12 +6,15 @@ using System.Threading.Tasks;
 
 namespace BlaisePascal.ProjectWork._3E.Application.ImportModels
 {
-    public class DatiImportatiDto
+    public static class DatiImportatiDto
     {
-        public  List<StudenteImportDto> Alunni { get; set; } = new List<StudenteImportDto>();
-        public  List<SceltaImportDto> Scelte { get; set; } = new List<SceltaImportDto>();
-        public  List<ScuolaProvImportDto> Scuole { get; set; } = new List<ScuolaProvImportDto>();
-        public  List<GenitoreImportDTO> Genitori { get; set; } = new List<GenitoreImportDTO>();
-        public  List<PreferenzaCompagnoImportDto> PreferenzeCompagni { get; set; } = new List<PreferenzaCompagnoImportDto>();
+        public static List<StudenteImportDto> Alunni { get; set; } = new List<StudenteImportDto>();
+        public static List<SceltaImportDto> Scelte { get; set; } = new List<SceltaImportDto>();
+        public static List<ScuolaProvImportDto> Scuole { get; set; } = new List<ScuolaProvImportDto>();
+        public static List<GenitoreImportDTO> Genitori { get; set; } = new List<GenitoreImportDTO>();
+        public static List<PreferenzaCompagnoImportDto> PreferenzeCompagni { get; set; } = new List<PreferenzaCompagnoImportDto>();
+        public static int NumeroClassiInformatica { get;set;}
+        public static int NumeroClassiAutomazione { get; set;}
+        public static int NumeroClassiBiotecnologie { get; set;}
     }
 }

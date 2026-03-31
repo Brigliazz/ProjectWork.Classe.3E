@@ -13,6 +13,7 @@ using Microsoft.Win32;
 using BlaisePascal.ProjectWork._3E.Domain.Services;
 using BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data;
 using BlaisePascal.ProjectWork._3E.Infrastructure.Database.DatabaseInitializer;
+using BlaisePascal.ProjectWork._3E.Application.ImportModels;
 
 
 namespace BlaisePascal.ProjectWork3E.Wpf
@@ -68,8 +69,10 @@ namespace BlaisePascal.ProjectWork3E.Wpf
             }
 
             // 3. Elaborazione dei dati (ora sicura)
-            var datiEstratti = ImportazioneService.EstrapolaDati(importedFilePath);
-            DatabaseInitializer.Initialize(datiEstratti);
+            DatiImportatiDto.NumeroClassiInformatica = numeroClassiInformatica;
+            DatiImportatiDto.NumeroClassiAutomazione = numeroClassiElettronica;
+            DatiImportatiDto.NumeroClassiBiotecnologie = numeroClassiBiotecnologie;
+            DatabaseInitializer.Initialize();
 
             // Messaggio di successo (aggiornato per mostrarti che le variabili funzionano)
             MessageBox.Show($"Importazione completata!\n\nFile: {importedFilePath}\nClassi Informatica: {numeroClassiInformatica}\nClassi Elettronica: {numeroClassiElettronica}\nClassi Biotecnologie: {numeroClassiBiotecnologie}",

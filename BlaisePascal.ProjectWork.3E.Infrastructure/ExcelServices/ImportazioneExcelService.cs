@@ -12,17 +12,15 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices
 {
     public class ImportazioneExcelService : IImportazioneExcelService
     {
-        public DatiImportatiDto EstrapolaDati(string percorsoFile)
+        public void EstrapolaDati(string percorsoFile)
         {
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
             // Creiamo l'oggetto contenitore che ha già le 5 liste pronte per essere riempite
-            DatiImportatiDto risultato = new DatiImportatiDto();
 
             if (!File.Exists(percorsoFile))
             {
-                Console.WriteLine($"ERRORE: File '{percorsoFile}' non trovato.");
-                return risultato; // Restituisce le liste vuote per evitare crash
+                Console.WriteLine($"ERRORE: File '{percorsoFile}' non trovato."); // Restituisce le liste vuote per evitare crash
             }
             /*
             per il percorso file bisogna fare in modo che dalla WPF (sfoglia file) venga messo il percorso nella varibaile percorsoFIle
@@ -96,7 +94,7 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices
                         bool sesso = EstraiDato(row, idxSesso) == "M";
 
                         // Riempimento delle 5 liste presenti dentro l'oggetto 'risultato'
-                        risultato.Alunni.Add(new StudenteImportDto
+                        DatiImportatiDto.Alunni.Add(new StudenteImportDto
                         {
                             Nome = nome,
                             Cognome = cognome,
@@ -114,18 +112,18 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices
                             DataArrivoInItalia = EstraiDato(row, idxDataArrivo)
                         });
 
-                        risultato.Scelte.Add(new SceltaImportDto { 
+                        DatiImportatiDto.Scelte.Add(new SceltaImportDto { 
                             IndirizzoScelto = EstraiDato(row, idxIndirizzoScelto),
                             CodiceFiscaleStudente = EstraiDato(row, idxCf),
                         });
-                        risultato.Scuole.Add(new ScuolaProvImportDto { CodiceScuola = EstraiDato(row, idxCodScuola), DenominazioneScuola = EstraiDato(row, idxNomeScuola), ComuneScuola = EstraiDato(row, idxComuneScuola), CodiceFiscaleStudente = EstraiDato(row, idxCf), });
-                        risultato.Genitori.Add(new GenitoreImportDTO { Numero = EstraiDato(row, idxTelGenitore1), Nome = EstraiDato(row, idxNomeGenitore1), Cognome = EstraiDato(row, idxCognomeGenitore1), Mail = EstraiDato(row, idxMailGenitore1), CodiceFiscale = EstraiDato(row, idxCf), });
-                        risultato.PreferenzeCompagni.Add(new PreferenzaCompagnoImportDto { NomeStudenteScelto = EstraiDato(row, idxPrefNomeCompagno), CodiceFiscaleStudente = EstraiDato(row, idxCf), });
+                        DatiImportatiDto.Scuole.Add(new ScuolaProvImportDto { CodiceScuola = EstraiDato(row, idxCodScuola), DenominazioneScuola = EstraiDato(row, idxNomeScuola), ComuneScuola = EstraiDato(row, idxComuneScuola), CodiceFiscaleStudente = EstraiDato(row, idxCf), });
+                        DatiImportatiDto.Genitori.Add(new GenitoreImportDTO { Numero = EstraiDato(row, idxTelGenitore1), Nome = EstraiDato(row, idxNomeGenitore1), Cognome = EstraiDato(row, idxCognomeGenitore1), Mail = EstraiDato(row, idxMailGenitore1), CodiceFiscale = EstraiDato(row, idxCf), });
+                        DatiImportatiDto.PreferenzeCompagni.Add(new PreferenzaCompagnoImportDto { NomeStudenteScelto = EstraiDato(row, idxPrefNomeCompagno), CodiceFiscaleStudente = EstraiDato(row, idxCf), });
                     }
                 }
 
                 // Alla fine restituiamo il contenitore con tutte e 5 le liste popolate!
-                return risultato;
+                //return DatiImportatiDto;
             }
         }
         

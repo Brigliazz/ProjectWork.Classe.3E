@@ -9,6 +9,6 @@ namespace BlaisePascal.ProjectWork._3E.Application.Interfaces
 {
     public interface IImportazioneExcelService
     {
-        DatiImportatiDto EstrapolaDati(string percorsoFile);
+        void EstrapolaDati(string percorsoFile);
     }
 }

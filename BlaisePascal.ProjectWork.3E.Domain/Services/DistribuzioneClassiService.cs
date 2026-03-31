@@ -151,25 +151,30 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
 
         private static Dictionary<Guid, Guid> RisolviConOrTools(List<Studente> studenti, List<ClassePrima> classi, OpzioniDistribuzione opzioni,List<(int IdxI, int IdxJ)> coppiePreferenze)
         {
+            // Inizializza il modello CP-SAT (Constraint Programming - Satisfiability)
+            // Questo modello conterrà tutte le variabili, i vincoli e la funzione obiettivo.
             var model = new CpModel();
             int n = studenti.Count;
             int m = classi.Count;
 
-            //  Variabili di decisione 
-            // x[i,j] = 1  ⟺  studente[i] è assegnato alla classe[j]
+            // Matrice delle variabili di decisione binaria
+            // x[i, j] è una variabile booleana che vale 1 se lo studente i-esimo 
+            // è assegnato alla classe j-esima, 0 altrimenti.
             var x = new BoolVar[n, m];
             for (int i = 0; i < n; i++)
                 for (int j = 0; j < m; j++)
                     x[i, j] = model.NewBoolVar($"x_{i}_{j}");
 
 
-            //  VINCOLO HARD: ogni studente in esattamente una classe 
+            // VINCOLO FISSO: Ogni studente deve appartenere a una e una sola classe.
+            // La somma orizzontale delle x[i, j] per ogni i deve essere esattamente 1.
             for (int i = 0; i < n; i++)
                 model.AddExactlyOne(
                     Enumerable.Range(0, m).Select(j => (ILiteral)x[i, j]).ToArray());
 
 
-            //  Precalcolo degli indici per categoria 
+            // Identifica gli indici degli studenti che appartengono a categorie specifiche
+            // Queste liste verranno usate per definire i vincoli di bilanciamento.
             var disabiliIdx  = IndiciStudenti(studenti, s => s.ProfiloBES.HasDisabilita);
             var ragazzeIdx   = IndiciStudenti(studenti, s => s.Sesso == Sesso.Femmina);
             var stranieriIdx = IndiciStudenti(studenti, s => s.IsStraniero);
@@ -178,15 +183,12 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             var eccIdx       = IndiciStudenti(studenti, s => s.IsEccellenza);
 
 
-            //  VINCOLI HARD P1: capienza e limite disabili 
-            //
-            // Il delta è la differenza tra il limite standard e quello con disabili (27-20=7).
-            // Modellazione della capienza condizionale:
-            //   Se d[j]=0 (nessun disabile):  Σx[i,j]          ≤ 27
-            //   Se d[j]=1 (un disabile):      Σx[i,j] + 7*d[j] ≤ 27  →  Σx[i,j] ≤ 20
-            // Questa singola disuguaglianza copre entrambi i casi.
-
-            int delta = opzioni.LimiteStandard - opzioni.LimiteDisabili; // 7
+            // VINCOLI SULLA CAPIENZA E DISABILITÀ (Parametri P1):
+            // 1. Ogni classe può avere al massimo 1 disabile (per ottimizzare l'integrazione).
+            // 2. Se una classe ha un disabile, la sua capienza massima scende a 20 studenti.
+            // 3. Altrimenti, la capienza standard è 27 (a meno di sforo permesso dalle opzioni).
+            
+            int delta = opzioni.LimiteStandard - opzioni.LimiteDisabili; // Solitamente 27 - 20 = 7
 
             for (int j = 0; j < m; j++)
             {
@@ -194,22 +196,24 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                 {
                     var disInClass = disabiliIdx.Select(i => (IntVar)x[i, j]).ToArray();
 
-                    // Max 1 disabile per classe
+                    // Primo vincolo: max 1 disabile per classe
                     model.Add(LinearExpr.Sum(disInClass) <= 1);
 
                     if (!opzioni.ConsentiSforo)
                     {
-                        // d[j] = 1 sse la classe j contiene uno studente disabile
+                        // dj è 1 se la classe j contiene almeno un disabile
                         var dj = model.NewBoolVar($"d_{j}");
 
-                        // x[i,j]=1 implica d[j]=1 per ogni studente disabile i
+                        // Se un qualunque disabile i è nella classe j, allora dj deve valere 1
                         foreach (var i in disabiliIdx)
                             model.AddImplication(x[i, j], dj);
 
-                        // d[j]=1 implica che almeno un disabile è nella classe
+                        // Viceversa, se dj=1 deve esserci almeno un disabile
                         model.Add(LinearExpr.Sum(disInClass) >= 1).OnlyEnforceIf(dj);
 
-                        // Capienza condizionale: Σ(tutti) + delta*d[j] ≤ LimiteStandard
+                        // Capienza logica: Sum(studenti_in_classe) + 7 * dj <= 27
+                        // Se dj=0 (no disabili): Sum <= 27
+                        // Se dj=1 (1 disabile): Sum + 7 <= 27  =>  Sum <= 20
                         var allVars = Enumerable.Range(0, n)
                             .Select(i => (IntVar)x[i, j])
                             .Append((IntVar)dj)
@@ -222,19 +226,15 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                 }
                 else if (!opzioni.ConsentiSforo)
                 {
-                    // Nessun disabile nell'intero pool: capienza piatta
+                    // Caso semplice senza disabili: capienza fissa per tutte le classi
                     model.Add(LinearExpr.Sum(Enumerable.Range(0, n).Select(i => (IntVar)x[i, j]).ToArray()) <= opzioni.LimiteStandard);
                 }
             }
 
 
-            //  VINCOLO HARD: max 30% stranieri per classe 
-            //
-            // NOTA: il vincolo esatto sarebbe Σ_stranieri / Σ_tutti ≤ 0.30,
-            // ma è nonlineare perché anche il denominatore è variabile.
-            // Approssimazione: si usa la dimensione media attesa come denominatore fisso.
-            // L'errore è trascurabile perché le classi vengono bilanciate anche in obiettivo.
-
+            // VINCOLO SULLA PERCENTUALE DI STRANIERI:
+            // Per regolamento, gli stranieri non dovrebbero superare il 30% degli alunni per classe.
+            // Poiché CP-SAT lavora con interi, calcoliamo una soglia numerica basata sulla media attesa.
             if (stranieriIdx.Count > 0 && !opzioni.ConsentiSforo)
             {
                 int attesoPerClasse = (int)Math.Ceiling((double)n / m);
@@ -245,20 +245,18 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             }
 
 
-            //  FUNZIONE OBIETTIVO 
-            //
-            // Ogni termine ha la forma (IntVar, peso).
-            // Il solver minimizza Σ(var * peso).
-            // Le variabili rappresentano misure di "cattiveria" della distribuzione:
-            // più sono alte, peggiore è la soluzione.
-
+            // FUNZIONE OBIETTIVO (Ottimizzazione dei criteri soft):
+            // Qui definiamo cosa rende una distribuzione "di qualità".
+            // Ogni penalità pesa sulla funzione obiettivo: il solver cercherà di minimizzare la somma totale dei pesi.
+            
             var objVars    = new List<IntVar>();
             var objWeights = new List<long>();
+            
+            // Metodo helper per aggiungere un parametro da minimizzare alla funzione obiettivo
             void AddPenalty(IntVar v, int w) { objVars.Add(v); objWeights.Add(w); }
 
-            // Sbilanciamento per categoria — P2 (peso alto) e P3 (peso basso)
-            // La funzione PenalitàBilancio crea una variabile che vale max(count) - min(count)
-            // tra tutte le classi per la categoria specificata.
+            // BILANCIAMENTO CATEGORIE (Minimizza la differenza tra la classe con più elementi e quella con meno):
+            // Più alto è il numero di ragazze, stranieri, DSA, ecc., più importante è bilanciarli equamente.
             if (ragazzeIdx.Count   > 0) AddPenalty(PenalitaBilancio(model, x, n, m, ragazzeIdx,   "girl"), 100);
             if (stranieriIdx.Count > 0) AddPenalty(PenalitaBilancio(model, x, n, m, stranieriIdx, "str"),   80);
             if (dsaIdx.Count       > 0) AddPenalty(PenalitaBilancio(model, x, n, m, dsaIdx,       "dsa"),   80);
@@ -266,20 +264,14 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             if (eccIdx.Count       > 0) AddPenalty(PenalitaBilancio(model, x, n, m, eccIdx,       "ecc"),   20);
 
 
-            // Anti-isolamento ragazze (P2): penalizza ogni classe con meno di 2 ragazze.
-            // Peso molto alto perché è un requisito esplicito del dominio.
-            //
-            // Modello:
-            //   atLeast2[j] = 1  sse  girlCount[j] >= 2
-            //   notAtLeast2[j]   = NOT(atLeast2[j])  → penalizzato in obiettivo
-            //
-            // OnlyEnforceIf garantisce che i vincoli sui conteggi siano attivi
-            // solo quando la rispettiva variabile booleana è vera.
-
+            // CRITERIO "ANTI-ISOLAMENTO" RAGAZZE:
+            // Evitiamo che una ragazza sia sola o con una sola compagna in una classe.
+            // Se in una classe ci sono meno di 2 ragazze, scatta una penalità molto alta (500).
             if (ragazzeIdx.Count >= 2)
             {
                 for (int j = 0; j < m; j++)
                 {
+                    // Conta le ragazze nella classe j
                     var gc = model.NewIntVar(0, ragazzeIdx.Count, $"gc_{j}");
                     model.Add(gc == LinearExpr.Sum(
                         ragazzeIdx.Select(i => (IntVar)x[i, j]).ToArray()));
@@ -287,9 +279,9 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                     var atLeast2    = model.NewBoolVar($"al2_{j}");
                     var notAtLeast2 = model.NewBoolVar($"nal2_{j}");
 
+                    // Se gc >= 2, atLeast2 = 1. Se gc <= 1, atLeast2 = 0 (implica notAtLeast2 = 1).
                     model.Add(gc >= 2).OnlyEnforceIf(atLeast2);
                     model.Add(gc <= 1).OnlyEnforceIf(atLeast2.Not());
-                    // Le due variabili booleane sono complementari (esattamente una vale 1)
                     model.AddBoolXor(new ILiteral[] { atLeast2, notAtLeast2 });
 
                     AddPenalty((IntVar)notAtLeast2, 500);
@@ -297,30 +289,24 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             }
 
 
-            // Preferenze SceltaCompagno (P2): matching fuzzy su testo libero.
-            //
-            // SceltaCompagno ha una proprietà .Testo di tipo string.
-            //
-            // Per ogni coppia (i,j) trovata:
-            //   together[k] = 1  sse  entrambi i e j sono nella classe k
-            //   inSameClass  = OR(together[k])  →  1 se nella stessa classe
-            //   notTogether  = NOT(inSameClass)  →  penalizzato in obiettivo
-
+            // GESTIONE PREFERENZE (SCELTA COMPAGNO):
+            // Per ogni coppia di studenti che hanno espresso una preferenza reciproca certa:
+            // Il solver cerca di metterli nella stessa classe. Se non ci riesce, aggiunge una penalità (50).
             foreach (var (pi, pj) in coppiePreferenze)
             {
                 var togetherK = new BoolVar[m];
                 for (int k = 0; k < m; k++)
                 {
                     togetherK[k] = model.NewBoolVar($"tog_{pi}_{pj}_{k}");
-                    // together[k] = 1  ⟺  x[i,k]=1 AND x[j,k]=1
+                    // togetherK[k] vale 1 solo se sia i che j sono nella classe k
                     model.AddBoolAnd(new ILiteral[] { x[pi, k], x[pj, k] })
                          .OnlyEnforceIf(togetherK[k]);
                     model.AddBoolOr(new ILiteral[] { x[pi, k].Not(), x[pj, k].Not() })
                          .OnlyEnforceIf(togetherK[k].Not());
                 }
 
+                // inSameClass vale 1 se i e j sono insieme in UNA QUALUNQUE delle classi m
                 var inSameClass = model.NewBoolVar($"sc_{pi}_{pj}");
-                // inSameClass = 1  ⟺  almeno un together[k] = 1
                 model.AddBoolOr(togetherK.Cast<ILiteral>().ToArray())
                      .OnlyEnforceIf(inSameClass);
                 model.AddBoolAnd(togetherK.Select(t => (ILiteral)t.Not()).ToArray())
@@ -332,39 +318,38 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             }
 
 
-            // Bilanciamento per scuola di provenienza (P2).
-            // Per ogni scuola con almeno 2 studenti, minimizza lo squilibrio
-            // del numero di suoi studenti tra le classi.
-
+            // BILANCIAMENTO SCUOLA DI PROVENIENZA:
+            // Evitiamo che troppi studenti della stessa scuola elementare/media finiscano tutti nella stessa classe (o nessuno).
+            // Questo aiuta l'integrazione con studenti di altre zone.
             foreach (var codice in CodiciScuolaDistinti(studenti))
             {
                 var scuolaIdx = IndiciStudenti(studenti, s => s.CodiceScuolaProvenienza == codice);
                 if (scuolaIdx.Count < 2) continue;
 
-                // Sanifica il codice per usarlo come parte del nome della variabile CP-SAT
                 string tag = "sc_" + new string(codice.Where(char.IsLetterOrDigit).Take(8).ToArray());
 
                 AddPenalty(PenalitaBilancio(model, x, n, m, scuolaIdx, tag), 60);
             }
 
 
-            // Assembla e imposta la funzione obiettivo
+            // Assembla e imposta la funzione obiettivo (minimizzare la somma pesata delle penalità)
             model.Minimize(LinearExpr.WeightedSum(
                 objVars.ToArray(), objWeights.ToArray()));
 
-
-            //  Risoluzione 
+            // ESECUZIONE DEL SOLVER:
             var solver = new CpSolver();
-            // 30 secondi di timeout; 4 thread paralleli per convergenza più rapida
+            // Impostiamo un timeout di 30 secondi e usiamo 4 core per accelerare la ricerca della soluzione ottima.
             solver.StringParameters = "max_time_in_seconds:30.0 num_search_workers:4";
 
             var status = solver.Solve(model);
 
+            // Se il solver non trova nemmeno una soluzione fattibile (che rispetti i vincoli P1), lanciamo un'eccezione.
             if (status != CpSolverStatus.Optimal && status != CpSolverStatus.Feasible)
-                throw new DomainException($"OR-Tools non ha trovato una soluzione fattibile (status: {status}). " + "Verificare che i vincoli P1 siano soddisfacibili con il numero di classi " + "disponibili (es. abbastanza classi per i disabili, stranieri < 30%).");
+                throw new DomainException($"OR-Tools non ha trovato una soluzione fattibile (status: {status}). " + "Verificare che i vincoli P1 siano soddisfacibili.");
 
 
-            //  Estrazione soluzione 
+            // ESTRAZIONE DEI RISULTATI:
+            // Mappiamo ogni studente alla classe assegnata leggendo il valore delle variabili x[i, j].
             var result = new Dictionary<Guid, Guid>(n);
             for (int i = 0; i < n; i++)
                 for (int j = 0; j < m; j++)
@@ -378,30 +363,26 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         }
 
 
-        //  PenalitaBilancio
-        //
-        // Crea nel modello una variabile intera che rappresenta
-        // max(count_j) − min(count_j),  dove count_j = numero di studenti
-        // del gruppo 'groupIdx' nella classe j.
-        //
-        // Questa variabile viene poi aggiunta all'obiettivo con un peso:
-        // il solver la spinge verso 0, cioè verso distribuzione uniforme.
-        
-
+        // LOGICA DI CALCOLO DELLO SBILANCIAMENTO:
+        // Crea una variabile intera che rappresenta la differenza tra il conteggio massimo di una categoria 
+        // in una classe e il conteggio minimo. Il solver cercherà di rendere questa differenza il più piccola possibile.
         private static IntVar PenalitaBilancio(CpModel model, BoolVar[,] x, int n, int m, List<int> groupIdx, string tag)
         {
             var count = new IntVar[m];
             for (int j = 0; j < m; j++)
             {
+                // Somma le variabili x[i, j] per tutti gli studenti i che appartengono al gruppo specifico
                 count[j] = model.NewIntVar(0, groupIdx.Count, $"{tag}_cnt_{j}");
                 model.Add(count[j] == LinearExpr.Sum(groupIdx.Select(i => (IntVar)x[i, j]).ToArray()));
             }
 
+            // Identifica il valore massimo e minimo tra tutte le classi
             var maxV = model.NewIntVar(0, groupIdx.Count, $"{tag}_max");
             var minV = model.NewIntVar(0, groupIdx.Count, $"{tag}_min");
             model.AddMaxEquality(maxV, count);
             model.AddMinEquality(minV, count);
 
+            // Lo sbilanciamento è la differenza tra massimo e minimo
             var imbalance = model.NewIntVar(0, groupIdx.Count, $"{tag}_imb");
             model.Add(imbalance == maxV - minV);
 

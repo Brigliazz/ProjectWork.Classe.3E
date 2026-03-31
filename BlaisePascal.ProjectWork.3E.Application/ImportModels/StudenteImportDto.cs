@@ -17,10 +17,12 @@ namespace BlaisePascal.ProjectWork._3E.Application.ImportModels
         public bool Disabilita { get; set; }
         public bool Dsa { get; set; }
         public string Indirizzo { get; set; }
-        public string VotoEsameTerzaMedia { get; set; } 
+        public int VotoEsameTerzaMedia { get; set; } 
         public bool FaReligione { get; set; }
         public string DataArrivoInItalia { get; set; } 
         public string DataDiNascita { get; set; }
         public bool DisabilitaAssistenzaBase { get; set; }
+
+        public int Id { get; set; }
     }
 }

@@ -160,7 +160,7 @@
                         <TextBlock Text="Risultati" Style="{StaticResource StepLabel}"/>
                     </StackPanel>
                     <Button x:Name="BtnDownload" Content="Scarica Risultati" MinHeight="42" 
-                            Style="{StaticResource SecondaryButton}"/>
+                            Style="{StaticResource SecondaryButton}" Click="BtnDownload_Click_1"/>
                 </StackPanel>
 
             </StackPanel>

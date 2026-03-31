@@ -1,3 +1,4 @@
+using BlaisePascal.ProjectWork._3E.Application.ImportModels;
 using Microsoft.Data.Sqlite;
 using System;
 
@@ -40,9 +41,8 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
             var reader = command.ExecuteReader();
             if (reader.Read())
             {
-                return new NumeroClassi
+                return new NumeroClassiDto
                 {
-                    Id = reader.GetInt32(0),
                     Automazione = reader.GetInt32(1),
                     Informatica = reader.GetInt32(2),
                     Biotecnologie = reader.GetInt32(3)

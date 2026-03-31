@@ -105,7 +105,8 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices
                             Disabilita = EstraiDato(row, idxDisabilita).ToLower().Contains("si"),
                             Dsa = EstraiDato(row, idxDsa).ToLower().Contains("si"),
                             Indirizzo = EstraiDato(row, idxIndirizzo),
-                            VotoEsameTerzaMedia = EstraiDato(row, idxVotoMedia),
+                            // Se EstraiDato restituisce un object o string
+                            VotoEsameTerzaMedia = Convert.ToInt32(EstraiDato(row, idxVotoMedia)),
                             FaReligione = EstraiDato(row, idxReligione).ToLower() == "si" || EstraiDato(row, idxReligione).ToLower() == "sì",
                             DisabilitaAssistenzaBase = EstraiDato(row, idxAssBase).ToLower() == "si" || EstraiDato(row, idxAssBase).ToLower() == "sì",
                             DataDiNascita = EstraiDato(row, idxDataNascita),

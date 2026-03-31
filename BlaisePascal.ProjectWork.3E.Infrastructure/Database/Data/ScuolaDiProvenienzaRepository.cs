@@ -44,7 +44,7 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
             {
                 return new ScuolaProvImportDto
                 {
-                    Id = reader.GetInt32(0),
+                    
                     CodiceScuola = reader.GetString(1),
                     DenominazioneScuola = reader.GetString(2),
                     ComuneScuola = reader.GetString(3),

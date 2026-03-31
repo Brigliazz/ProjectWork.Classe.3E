@@ -109,7 +109,7 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
                 command.Parameters.AddWithValue("@disabilita", s.Disabilita);
                 command.Parameters.AddWithValue("@dsa", s.Dsa);
                 command.Parameters.AddWithValue("@indirizzo", s.Indirizzo ?? string.Empty);
-                command.Parameters.AddWithValue("@voto", int.TryParse(s.VotoEsameTerzaMedia, out int voto) ? voto : 0);
+                command.Parameters.AddWithValue("@voto", s.VotoEsameTerzaMedia);
                 command.Parameters.AddWithValue("@religione", s.FaReligione);
                 command.Parameters.AddWithValue("@arrivo", s.DataArrivoInItalia ?? string.Empty);
                 command.Parameters.AddWithValue("@nascita", s.DataDiNascita ?? string.Empty);

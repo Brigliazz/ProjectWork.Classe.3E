@@ -78,10 +78,10 @@ namespace BlaisePascal.ProjectWork3E.Wpf
             MessageBox.Show($"Importazione completata!\n\nFile: {importedFilePath}\nClassi Informatica: {numeroClassiInformatica}\nClassi Elettronica: {numeroClassiElettronica}\nClassi Biotecnologie: {numeroClassiBiotecnologie}",
                             "Verifica Importazione", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-        private void BtnDownload_Click(object sender, RoutedEventArgs e)
+
+        private void BtnDownload_Click_1(object sender, RoutedEventArgs e)
         {
 
         }
-
     }
 }

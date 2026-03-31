@@ -12,6 +12,7 @@ namespace BlaisePascal.ProjectWork._3E.Application.ImportModels
         public string Nome { get; set; }
         public string Cognome { get; set; }
         public string Mail { get; set; }
+        public int Id { get; set; }
 
         public string CodiceFiscale { get; set; }
     }

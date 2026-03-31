@@ -10,5 +10,6 @@ namespace BlaisePascal.ProjectWork._3E.Application.ImportModels
     {
         public string NomeStudenteScelto { get; set; }
         public string CodiceFiscaleStudente { get; set; }
+        public int Id { get; set; }
     }
 }

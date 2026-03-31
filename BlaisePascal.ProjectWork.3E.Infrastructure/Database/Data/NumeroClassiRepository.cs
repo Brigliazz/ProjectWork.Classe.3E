@@ -25,7 +25,7 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
             command.ExecuteNonQuery();
         }
 
-        public static NumeroClassi LeggiNumeroClassi(int id)
+        public static NumeroClassiDto LeggiNumeroClassi(int id)
         {
             using var connection = new SqliteConnection(connectionString);
             connection.Open();

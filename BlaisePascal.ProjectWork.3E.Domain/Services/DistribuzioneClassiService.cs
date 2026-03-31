@@ -8,6 +8,7 @@ using BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente;
 using BlaisePascal.ProjectWork._3E.Domain.Exceptions;
 using BlaisePascal.ProjectWork._3E.Domain.Repositories;
 using BlaisePascal.ProjectWork._3E.Domain.Enums;
+using static BlaisePascal.ProjectWork._3E.Domain.Services.Categorie;
 
 namespace BlaisePascal.ProjectWork._3E.Domain.Services
 {

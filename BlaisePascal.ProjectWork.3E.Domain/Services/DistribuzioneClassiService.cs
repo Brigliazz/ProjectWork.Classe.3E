@@ -36,8 +36,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         //  Entry point pubblico
         
 
-        public async Task<List<List<Studente>>> DistribuisciAsync(
-            OpzioniDistribuzione? opzioni = null)
+        public async Task<List<List<Studente>>> DistribuisciAsync(OpzioniDistribuzione? opzioni = null)
         {
             opzioni ??= OpzioniDistribuzione.Default;
 
@@ -68,10 +67,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                 // Solo i certi entrano nel modello OR-Tools
                 coppiePreferenze = risultatiMatch
                     .Where(r => r.Categoria == CategoriaMatch.Certo && r.CandidatoTrovato != null)
-                    .Select(r => (
-                        IdxI: studenti.IndexOf(r.Richiedente),
-                        IdxJ: studenti.IndexOf(r.CandidatoTrovato!)
-                    ))
+                    .Select(r => (IdxI: studenti.IndexOf(r.Richiedente),IdxJ: studenti.IndexOf(r.CandidatoTrovato!)))
                     .Where(p => p.IdxI >= 0 && p.IdxJ >= 0)
                     .ToList();
             }
@@ -99,8 +95,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         private async Task<List<ClassePrima>> GeneraClassiAsync(OpzioniDistribuzione opzioni)
         {
             if (opzioni.SezioniPerIndirizzo == null || opzioni.SezioniPerIndirizzo.Count == 0)
-                throw new DomainException(
-                    "Non ci sono classi disponibili e non ne è stata richiesta la generazione.");
+                throw new DomainException("Non ci sono classi disponibili e non ne è stata richiesta la generazione.");
 
             var mapSezioni = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
@@ -119,8 +114,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                     throw new DomainException($"Indirizzo sconosciuto: {kvp.Key}");
 
                 if (kvp.Value > ammesse.Length)
-                    throw new DomainException(
-                        $"Richieste {kvp.Value} sezioni per {kvp.Key}, disponibili max {ammesse.Length}.");
+                    throw new DomainException($"Richieste {kvp.Value} sezioni per {kvp.Key}, disponibili max {ammesse.Length}.");
 
                 var indirizzo = IndirizzoScolastico.Crea(kvp.Key);
                 for (int i = 0; i < kvp.Value; i++)
@@ -155,9 +149,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         // Ritorna: dizionario studenteId → classeId
         
 
-        private static Dictionary<Guid, Guid> RisolviConOrTools(
-            List<Studente> studenti, List<ClassePrima> classi, OpzioniDistribuzione opzioni,
-            List<(int IdxI, int IdxJ)> coppiePreferenze)
+        private static Dictionary<Guid, Guid> RisolviConOrTools(List<Studente> studenti, List<ClassePrima> classi, OpzioniDistribuzione opzioni,List<(int IdxI, int IdxJ)> coppiePreferenze)
         {
             var model = new CpModel();
             int n = studenti.Count;
@@ -231,9 +223,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                 else if (!opzioni.ConsentiSforo)
                 {
                     // Nessun disabile nell'intero pool: capienza piatta
-                    model.Add(LinearExpr.Sum(
-                        Enumerable.Range(0, n).Select(i => (IntVar)x[i, j]).ToArray())
-                        <= opzioni.LimiteStandard);
+                    model.Add(LinearExpr.Sum(Enumerable.Range(0, n).Select(i => (IntVar)x[i, j]).ToArray()) <= opzioni.LimiteStandard);
                 }
             }
 
@@ -251,8 +241,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                 int maxStranieri    = Math.Max(1, (int)Math.Floor(0.30 * attesoPerClasse));
 
                 for (int j = 0; j < m; j++)
-                    model.Add(LinearExpr.Sum(
-                        stranieriIdx.Select(i => (IntVar)x[i, j]).ToArray()) <= maxStranieri);
+                    model.Add(LinearExpr.Sum(stranieriIdx.Select(i => (IntVar)x[i, j]).ToArray()) <= maxStranieri);
             }
 
 
@@ -349,13 +338,11 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
 
             foreach (var codice in CodiciScuolaDistinti(studenti))
             {
-                var scuolaIdx = IndiciStudenti(
-                    studenti, s => s.CodiceScuolaProvenienza == codice);
+                var scuolaIdx = IndiciStudenti(studenti, s => s.CodiceScuolaProvenienza == codice);
                 if (scuolaIdx.Count < 2) continue;
 
                 // Sanifica il codice per usarlo come parte del nome della variabile CP-SAT
-                string tag = "sc_" + new string(
-                    codice.Where(char.IsLetterOrDigit).Take(8).ToArray());
+                string tag = "sc_" + new string(codice.Where(char.IsLetterOrDigit).Take(8).ToArray());
 
                 AddPenalty(PenalitaBilancio(model, x, n, m, scuolaIdx, tag), 60);
             }
@@ -374,10 +361,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             var status = solver.Solve(model);
 
             if (status != CpSolverStatus.Optimal && status != CpSolverStatus.Feasible)
-                throw new DomainException(
-                    $"OR-Tools non ha trovato una soluzione fattibile (status: {status}). " +
-                    "Verificare che i vincoli P1 siano soddisfacibili con il numero di classi " +
-                    "disponibili (es. abbastanza classi per i disabili, stranieri < 30%).");
+                throw new DomainException($"OR-Tools non ha trovato una soluzione fattibile (status: {status}). " + "Verificare che i vincoli P1 siano soddisfacibili con il numero di classi " + "disponibili (es. abbastanza classi per i disabili, stranieri < 30%).");
 
 
             //  Estrazione soluzione 
@@ -404,16 +388,13 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         // il solver la spinge verso 0, cioè verso distribuzione uniforme.
         
 
-        private static IntVar PenalitaBilancio(
-            CpModel model, BoolVar[,] x, int n, int m,
-            List<int> groupIdx, string tag)
+        private static IntVar PenalitaBilancio(CpModel model, BoolVar[,] x, int n, int m, List<int> groupIdx, string tag)
         {
             var count = new IntVar[m];
             for (int j = 0; j < m; j++)
             {
                 count[j] = model.NewIntVar(0, groupIdx.Count, $"{tag}_cnt_{j}");
-                model.Add(count[j] == LinearExpr.Sum(
-                    groupIdx.Select(i => (IntVar)x[i, j]).ToArray()));
+                model.Add(count[j] == LinearExpr.Sum(groupIdx.Select(i => (IntVar)x[i, j]).ToArray()));
             }
 
             var maxV = model.NewIntVar(0, groupIdx.Count, $"{tag}_max");
@@ -431,8 +412,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         //  IndiciStudenti — ritorna gli indici nella lista dove il predicato è vero
         
 
-        private static List<int> IndiciStudenti(
-            List<Studente> studenti, Func<Studente, bool> pred)
+        private static List<int> IndiciStudenti(List<Studente> studenti, Func<Studente, bool> pred)
             => studenti
                 .Select((s, i) => (s, i))
                 .Where(t => pred(t.s))
@@ -467,11 +447,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         // (20 vs 27) funziona correttamente.
         
 
-        private static void ApplicaSoluzione(
-            Dictionary<Guid, Guid> assegnazioni,
-            List<Studente> studenti,
-            List<ClassePrima> classi,
-            OpzioniDistribuzione opzioni)
+        private static void ApplicaSoluzione(Dictionary<Guid, Guid> assegnazioni,List<Studente> studenti,List<ClassePrima> classi,OpzioniDistribuzione opzioni)
         {
             var classiById = classi.ToDictionary(c => c.Id);
 
@@ -479,10 +455,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             foreach (var studente in studenti.OrderByDescending(s => s.ProfiloBES.HasDisabilita))
             {
                 if (!assegnazioni.TryGetValue(studente.Id, out var classeId))
-                    throw new DomainException(
-                        $"OR-Tools non ha assegnato lo studente " +
-                        $"{studente.Nome} {studente.Cognome} a nessuna classe. " +
-                        "Questo non dovrebbe accadere: verificare i vincoli hard del modello.");
+                    throw new DomainException($"OR-Tools non ha assegnato lo studente " + $"{studente.Nome} {studente.Cognome} a nessuna classe. " + "Questo non dovrebbe accadere: verificare i vincoli hard del modello.");
 
                 classiById[classeId].AggiungiStudente(studente, opzioni);
             }
@@ -498,11 +471,9 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         //     coincide con la sezione precedente dello studente
         
 
-        public Task IntegraBocciatiAsync(
-            IEnumerable<Studente> bocciati, OpzioniDistribuzione? opzioni = null)
+        public Task IntegraBocciatiAsync(IEnumerable<Studente> bocciati, OpzioniDistribuzione? opzioni = null)
         {
-            throw new NotImplementedException(
-                "P4 (integrazione bocciati e trasferimenti, settembre) non ancora implementata.");
+            throw new NotImplementedException("P4 (integrazione bocciati e trasferimenti, settembre) non ancora implementata.");
         }
     }
 }

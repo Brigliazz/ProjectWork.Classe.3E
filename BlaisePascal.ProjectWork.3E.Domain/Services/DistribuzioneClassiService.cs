@@ -419,7 +419,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
 
         //  ApplicaSoluzione
         //
-        // Traduce il dizionario studenteId → classeId in chiamate ai metodi
+        // Traduce il dizionario studenteId → classeId in chiamate ai metodiù
         // di dominio AggiungiStudente.
         //
         // I disabili vengono applicati per primi: questo garantisce che

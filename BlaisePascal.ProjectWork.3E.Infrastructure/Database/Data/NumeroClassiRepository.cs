@@ -25,6 +25,31 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
             command.ExecuteNonQuery();
         }
 
+        public static NumeroClassiDto LeggiNumeroClassi(int id)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText =
+            @"
+            SELECT * FROM NumeroClassi WHERE Id = @id
+            ";
+            command.Parameters.AddWithValue("@id", id);
+
+            var reader = command.ExecuteReader();
+            if (reader.Read())
+            {
+                return new NumeroClassi
+                {
+                    Id = reader.GetInt32(0),
+                    Automazione = reader.GetInt32(1),
+                    Informatica = reader.GetInt32(2),
+                    Biotecnologie = reader.GetInt32(3)
+                };
+            }
+            return null;
+        }
         public static void SvuotaTabella()
         {
             using var connection = new SqliteConnection(connectionString);

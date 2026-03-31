@@ -27,6 +27,31 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
             command.ExecuteNonQuery();
         }
 
+        public static PreferenzaCompagnoImportDto LeggiPreferenza(int id)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText =
+            @"
+            SELECT * FROM PreferenzeCompagno WHERE Id = @id
+            ";
+            command.Parameters.AddWithValue("@id", id);
+
+            var reader = command.ExecuteReader();
+            if (reader.Read())
+            {
+                return new PreferenzaCompagnoImportDto
+                {
+                    Id = reader.GetInt32(0),
+                    NomeStudenteScelto = reader.GetString(1),
+                    CodiceFiscaleStudente = reader.GetString(2)
+                };
+            }
+            return null;
+        }
+        
         public static void SvuotaTabella()
         {
             using var connection = new SqliteConnection(connectionString);

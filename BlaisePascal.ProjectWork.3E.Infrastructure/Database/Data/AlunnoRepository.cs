@@ -37,6 +37,44 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
             ";
             command.ExecuteNonQuery();
         }
+
+        public static StudenteImportDto LeggiStudente(int id)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText =
+            @"
+            SELECT * FROM Studenti WHERE Id = @id
+            ";
+            command.Parameters.AddWithValue("@id", id);
+
+            var reader = command.ExecuteReader();
+            if (reader.Read())
+            {
+                return new StudenteImportDto
+                {
+                    Id = reader.GetInt32(0),
+                    Nome = reader.GetString(1),
+                    Cognome = reader.GetString(2),
+                    Sesso = reader.GetBoolean(3),
+                    DataDiNascita = reader.GetString(4),
+                    DataArrivoInItalia = reader.GetString(5),
+                    CodiceFiscale = reader.GetString(6),
+                    Cittadinanza = reader.GetString(7),
+                    ComuneResidenza = reader.GetString(8),
+                    Disabilita = reader.GetBoolean(9),
+                    Dsa = reader.GetBoolean(10),
+                    DisabilitaAssistenzaBase = reader.GetBoolean(11),
+                    Indirizzo = reader.GetString(12),
+                    VotoEsameTerzaMedia = reader.GetInt32(13),
+                    FaReligione = reader.GetBoolean(14)
+                };
+            }
+            return null;
+        }
+
         public static void SvuotaTabella()
         {
             using var connection = new SqliteConnection(connectionString);

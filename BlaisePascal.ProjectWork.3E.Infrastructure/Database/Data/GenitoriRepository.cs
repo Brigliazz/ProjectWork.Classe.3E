@@ -29,6 +29,35 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Database.Data
 
             command.ExecuteNonQuery();
         }
+
+        public static GenitoreImportDTO LeggiGenitore(int id)
+        {
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText =
+            @"
+            SELECT * FROM Genitori WHERE Id = @id
+            ";
+            command.Parameters.AddWithValue("@id", id);
+
+            var reader = command.ExecuteReader();
+            if (reader.Read())
+            {
+                return new GenitoreImportDTO
+                {
+                    Id = reader.GetInt32(0),
+                    Nome = reader.GetString(1),
+                    Cognome = reader.GetString(2),
+                    Numero = reader.GetString(3),
+                    Mail = reader.GetString(4),
+                    CodiceFiscale = reader.GetString(5)
+                };
+            }
+            return null;
+        }
+
         public static void SvuotaTabella()
         {
             using var connection = new SqliteConnection(connectionString);

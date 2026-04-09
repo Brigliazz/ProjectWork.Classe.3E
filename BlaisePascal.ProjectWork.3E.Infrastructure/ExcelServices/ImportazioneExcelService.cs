@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -105,8 +105,8 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices
                             Disabilita = EstraiDato(row, idxDisabilita).ToLower().Contains("si"),
                             Dsa = EstraiDato(row, idxDsa).ToLower().Contains("si"),
                             Indirizzo = EstraiDato(row, idxIndirizzo),
-                            // Se EstraiDato restituisce un object o string
-                            VotoEsameTerzaMedia = Convert.ToInt32(EstraiDato(row, idxVotoMedia)),
+                            // Se EstraiDato restituisce un object o string (usiamo TryParse per evitare errori se la cella è vuota)
+                            VotoEsameTerzaMedia = int.TryParse(EstraiDato(row, idxVotoMedia), out int voto) ? voto : 0,
                             FaReligione = EstraiDato(row, idxReligione).ToLower() == "si" || EstraiDato(row, idxReligione).ToLower() == "sì",
                             DisabilitaAssistenzaBase = EstraiDato(row, idxAssBase).ToLower() == "si" || EstraiDato(row, idxAssBase).ToLower() == "sì",
                             DataDiNascita = EstraiDato(row, idxDataNascita),

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente;
 using BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima;
@@ -36,17 +38,19 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Persistence
                     bes.Property(b => b.HasDisabilitaAssBase).HasColumnName("HasDisabilitaAssBase");
                 });
 
-                // Value Object: Cittadinanza — owned type
-                entity.OwnsOne(s => s.Cittadinanza, citt =>
-                {
-                    citt.Property(c => c.Codice).HasColumnName("CodiceCittadinanza");
-                });
+                // Value Object: Cittadinanza
+                entity.Property(s => s.Cittadinanza)
+                    .HasConversion(
+                        c => c.Codice,
+                        cod => Cittadinanza.Crea(cod))
+                    .HasColumnName("CodiceCittadinanza");
 
-                // Value Object: SceltaCompagno — owned type (nullable)
-                entity.OwnsOne(s => s.SceltaCompagno, sc =>
-                {
-                    sc.Property(c => c.Testo).HasColumnName("SceltaCompagno");
-                });
+                // Value Object: SceltaCompagno (nullable)
+                entity.Property(s => s.SceltaCompagno)
+                    .HasConversion(
+                        sc => sc == null ? null : sc.Testo,
+                        t => string.IsNullOrWhiteSpace(t) ? null : SceltaCompagno.Crea(t))
+                    .HasColumnName("SceltaCompagno");
 
                 // FK verso ClassePrima — SetNull on delete
                 entity.HasOne<ClassePrima>()
@@ -60,18 +64,23 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Persistence
             {
                 entity.HasKey(c => c.Id);
 
-                // Value Object: Sezione — owned type
-                entity.OwnsOne(c => c.Sezione, sez =>
-                {
-                    sez.Property(s => s.Valore).HasColumnName("Sezione").IsRequired();
-                    sez.HasIndex(s => s.Valore).IsUnique();
-                });
+                // Value Object: Sezione
+                entity.Property(c => c.Sezione)
+                    .HasConversion(
+                        s => s.Valore,
+                        v => Sezione.Crea(v))
+                    .HasColumnName("Sezione")
+                    .IsRequired();
 
-                // Value Object: IndirizzoScolastico — owned type
-                entity.OwnsOne(c => c.Indirizzo, ind =>
-                {
-                    ind.Property(i => i.Nome).HasColumnName("Indirizzo").IsRequired();
-                });
+                entity.HasIndex("Sezione").IsUnique();
+
+                // Value Object: IndirizzoScolastico
+                entity.Property(c => c.Indirizzo)
+                    .HasConversion(
+                        i => i.Nome,
+                        n => IndirizzoScolastico.Crea(n))
+                    .HasColumnName("Indirizzo")
+                    .IsRequired();
 
                 // StudentiIds — serializzato come JSON
                 entity.Property<List<Guid>>("_studentiIds")

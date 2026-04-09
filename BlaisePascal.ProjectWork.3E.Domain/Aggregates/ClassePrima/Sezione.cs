@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using BlaisePascal.ProjectWork._3E.Domain.Exceptions;
 
 namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
@@ -12,7 +14,9 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
             "Bio"                                         // Bio
         };
 
-        public string Valore { get; }
+        public string Valore { get; private set; }
+
+        private Sezione() { Valore = string.Empty; } // for EF Core
 
         private Sezione(string valore)
         {

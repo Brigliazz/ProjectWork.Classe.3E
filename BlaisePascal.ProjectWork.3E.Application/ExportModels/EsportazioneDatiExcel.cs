@@ -1,4 +1,4 @@
-﻿using BlaisePascal.ProjectWork._3E.Domain.Services;
+using BlaisePascal.ProjectWork._3E.Domain.Services;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using System;
@@ -12,20 +12,10 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
 {
     public class EsportazioneDatiExcel
     {
-        private readonly DistribuzioneClassiService _distribuzioneService;
-
-        public EsportazioneDatiExcel(DistribuzioneClassiService distribuzioneService)
-        {
-            _distribuzioneService = distribuzioneService;
-        }
-
-        public async Task EsportaAsync()
+        public void Esporta(List<List<BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.Studente>> matriceClassi)
         {
             // Licenza gratuita EPPlus
-            ExcelPackage.License.SetNonCommercialOrganization("<Your Noncommercial Organization>");
-
-            // Recupero matrice di studenti per classe
-            var matriceClassi = await _distribuzioneService.DistribuisciAsync();
+            ExcelPackage.License.SetNonCommercialOrganization("PCTO School Project");
 
             if (matriceClassi.Count == 0)
             {

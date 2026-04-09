@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using BlaisePascal.ProjectWork._3E.Domain.Exceptions;
 
 namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
@@ -27,7 +29,9 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
                 { "Bio", "Bio" }
             };
 
-        public string Nome { get; }
+        public string Nome { get; private set; }
+
+        private IndirizzoScolastico() { Nome = string.Empty; } // For EF Core
 
         private IndirizzoScolastico(string nome)
         {

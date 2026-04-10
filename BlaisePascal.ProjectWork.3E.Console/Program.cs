@@ -111,7 +111,8 @@ string[] scuoleProvenienza = { "MIIS00100A", "MIIS00200B", "MIIS00300C", "MIIS00
 
 Studente CreaStudente(string nome, string cognome, Sesso sesso,
     bool hasDisabilita = false, bool hasDSA = false, bool isStraniero = false,
-    int? votoEsame = null, string? codiceScuola = null, SceltaCompagno? sceltaCompagno = null)
+    int? votoEsame = null, string? codiceScuola = null, SceltaCompagno? sceltaCompagno = null,
+    IndirizzoScolastico? indirizzoScolastico = null)
 {
     cfCounter++;
     var cittadinanza = isStraniero ? Cittadinanza.Crea(100) : Cittadinanza.Italiana;
@@ -126,7 +127,8 @@ Studente CreaStudente(string nome, string cognome, Sesso sesso,
         profiloBES,
         faReligione: true,
         votoEsame: votoEsame,
-        sceltaCompagno: sceltaCompagno);
+        sceltaCompagno: sceltaCompagno,
+        indirizzoScolastico: indirizzoScolastico);
 }
 
 // Generazione automatica con percentuali realistiche
@@ -155,6 +157,12 @@ if (opzioni.UsaPreferenze && totaleStudenti >= 10)
     prefAssegnate = preferenzePerIndice.Count;
 }
 
+// Distribuzione proporzionale degli indirizzi in base al numero di sezioni
+var indirizziAssegnati = new List<IndirizzoScolastico>();
+for (int s = 0; s < numAutomazione; s++) indirizziAssegnati.Add(IndirizzoScolastico.Automazione);
+for (int s = 0; s < numInformatica; s++) indirizziAssegnati.Add(IndirizzoScolastico.Informatica);
+for (int s = 0; s < numBio; s++) indirizziAssegnati.Add(IndirizzoScolastico.Bio);
+
 var studenti = new List<Studente>();
 for (int i = 0; i < totaleStudenti; i++)
 {
@@ -165,6 +173,9 @@ for (int i = 0; i < totaleStudenti; i++)
 
     preferenzePerIndice.TryGetValue(i, out var sceltaCompagno);
 
+    // Assegna l'indirizzo ciclicamente tra quelli configurati
+    var indirizzo = indirizziAssegnati[i % indirizziAssegnati.Count];
+
     studenti.Add(CreaStudente(
         $"Nome{i + 1}",
         $"Cognome{i + 1}",
@@ -174,7 +185,8 @@ for (int i = 0; i < totaleStudenti; i++)
         isStraniero: isStraniero,
         votoEsame: (i % 5) + 6,
         codiceScuola: scuoleProvenienza[i % scuoleProvenienza.Length],
-        sceltaCompagno: sceltaCompagno));
+        sceltaCompagno: sceltaCompagno,
+        indirizzoScolastico: indirizzo));
 }
 
 foreach (var s in studenti)

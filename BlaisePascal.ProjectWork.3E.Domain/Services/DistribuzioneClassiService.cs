@@ -148,9 +148,57 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         //
         // Ritorna: dizionario studenteId → classeId
         
+        // Validazione preventiva dei vincoli strutturali P1 prima dell'invio al solver
+        private static List<string> ValidaVincoliP1(List<Studente> studenti, List<ClassePrima> classi, OpzioniDistribuzione opzioni)
+        {
+            var violazioni = new List<string>();
+            var indirizziDistinti = classi.Select(c => c.Indirizzo).Distinct().ToList();
+
+            foreach (var indirizzo in indirizziDistinti)
+            {
+                int classiIndirizzo = classi.Count(c => c.Indirizzo == indirizzo);
+                if (classiIndirizzo == 0) continue;
+
+                var studentiIndirizzo = studenti.Where(s => s.IndirizzoScolastico == indirizzo).ToList();
+                int totStudenti = studentiIndirizzo.Count;
+
+                // 1. Overflow capienza
+                if (totStudenti > classiIndirizzo * opzioni.LimiteStandard)
+                {
+                    violazioni.Add($"[{indirizzo.Nome}] Capienza: {totStudenti} studenti su {classiIndirizzo} classi disponibili (max {opzioni.LimiteStandard} per classe, totale {classiIndirizzo * opzioni.LimiteStandard}).");
+                }
+
+                // 2. Overflow disabili
+                int totDisabili = studentiIndirizzo.Count(s => s.ProfiloBES.HasDisabilita);
+                if (totDisabili > classiIndirizzo)
+                {
+                    violazioni.Add($"[{indirizzo.Nome}] Disabili: {totDisabili} su {classiIndirizzo} classi disponibili (max 1 per classe).");
+                }
+
+                // 3. Overflow stranieri
+                int totStranieri = studentiIndirizzo.Count(s => s.IsStraniero);
+                int attesoPerClasse = (int)Math.Ceiling((double)totStudenti / classiIndirizzo);
+                int maxStranieriPerClasse = Math.Max(1, (int)Math.Floor(0.30 * attesoPerClasse));
+                int maxStranieriTotale = classiIndirizzo * maxStranieriPerClasse;
+                
+                if (totStranieri > maxStranieriTotale)
+                {
+                    violazioni.Add($"[{indirizzo.Nome}] Stranieri: {totStranieri} su limite calcolato di {maxStranieriTotale} (max {maxStranieriPerClasse} per classe).");
+                }
+            }
+
+            return violazioni;
+        }
 
         private static Dictionary<Guid, Guid> RisolviConOrTools(List<Studente> studenti, List<ClassePrima> classi, OpzioniDistribuzione opzioni,List<(int IdxI, int IdxJ)> coppiePreferenze)
         {
+            var violazioniStrutturali = ValidaVincoliP1(studenti, classi, opzioni);
+            if (violazioniStrutturali.Count > 0)
+            {
+                foreach (var v in violazioniStrutturali)
+                    Console.WriteLine($"[P1-WARN] {v}");
+            }
+
             // Inizializza il modello CP-SAT (Constraint Programming - Satisfiability)
             // Questo modello conterrà tutte le variabili, i vincoli e la funzione obiettivo.
             var model = new CpModel();
@@ -171,6 +219,14 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             for (int i = 0; i < n; i++)
                 model.AddExactlyOne(
                     Enumerable.Range(0, m).Select(j => (ILiteral)x[i, j]).ToArray());
+
+
+            // VINCOLO P1: ogni studente può essere assegnato solo a classi del suo indirizzo.
+            // Se l'indirizzo dello studente non corrisponde a quello della classe, x[i,j] = 0.
+            for (int i = 0; i < n; i++)
+                for (int j = 0; j < m; j++)
+                    if (studenti[i].IndirizzoScolastico != classi[j].Indirizzo)
+                        model.Add(x[i, j] == 0);
 
 
             // Identifica gli indici degli studenti che appartengono a categorie specifiche
@@ -223,25 +279,66 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                             .ToArray();
                         model.Add(LinearExpr.WeightedSum(allVars, weights) <= opzioni.LimiteStandard);
                     }
+                    else
+                    {
+                        // In modalità sforo, imponiamo quantomeno il limite fisico/assoluto della classe
+                        var allVarsInClass = Enumerable.Range(0, n).Select(i => (IntVar)x[i, j]).ToArray();
+                        model.Add(LinearExpr.Sum(allVarsInClass) <= opzioni.LimiteMassimoAssoluto);
+                    }
                 }
-                else if (!opzioni.ConsentiSforo)
+                else
                 {
-                    // Caso semplice senza disabili: capienza fissa per tutte le classi
-                    model.Add(LinearExpr.Sum(Enumerable.Range(0, n).Select(i => (IntVar)x[i, j]).ToArray()) <= opzioni.LimiteStandard);
+                    // Nessun disabile nell'istituto (o in questa iterazione)
+                    var allVarsInClass = Enumerable.Range(0, n).Select(i => (IntVar)x[i, j]).ToArray();
+                    if (!opzioni.ConsentiSforo)
+                    {
+                        model.Add(LinearExpr.Sum(allVarsInClass) <= opzioni.LimiteStandard);
+                    }
+                    else
+                    {
+                        model.Add(LinearExpr.Sum(allVarsInClass) <= opzioni.LimiteMassimoAssoluto);
+                    }
                 }
             }
 
 
             // VINCOLO SULLA PERCENTUALE DI STRANIERI:
             // Per regolamento, gli stranieri non dovrebbero superare il 30% degli alunni per classe.
-            // Poiché CP-SAT lavora con interi, calcoliamo una soglia numerica basata sulla media attesa.
+            // Calcoliamo la soglia per indirizzo, non globale.
             if (stranieriIdx.Count > 0 && !opzioni.ConsentiSforo)
             {
-                int attesoPerClasse = (int)Math.Ceiling((double)n / m);
-                int maxStranieri    = Math.Max(1, (int)Math.Floor(0.30 * attesoPerClasse));
+                // Pre-calcolo: conteggi per indirizzo (evita O(n·m) nel loop)
+                var studentiPerIndirizzo = studenti
+                    .GroupBy(s => s.IndirizzoScolastico)
+                    .ToDictionary(g => g.Key, g => g.Count());
+
+                var classiPerIndirizzo = classi
+                    .GroupBy(c => c.Indirizzo)
+                    .ToDictionary(g => g.Key, g => g.Count());
+
+                var stranieriPerIndirizzo = stranieriIdx
+                    .GroupBy(i => studenti[i].IndirizzoScolastico)
+                    .ToDictionary(g => g.Key, g => g.ToList());
 
                 for (int j = 0; j < m; j++)
-                    model.Add(LinearExpr.Sum(stranieriIdx.Select(i => (IntVar)x[i, j]).ToArray()) <= maxStranieri);
+                {
+                    var indirizzo = classi[j].Indirizzo;
+                    int totStudentiIndirizzo = studentiPerIndirizzo.GetValueOrDefault(indirizzo, 0);
+                    int totClassiIndirizzo   = classiPerIndirizzo.GetValueOrDefault(indirizzo, 0);
+
+                    if (totClassiIndirizzo > 0)
+                    {
+                        int attesoPerClasse = (int)Math.Ceiling((double)totStudentiIndirizzo / totClassiIndirizzo);
+                        int maxStranieri = Math.Max(1, (int)Math.Floor(0.30 * attesoPerClasse));
+                        
+                        // Applica il vincolo maxStranieri solo agli stranieri del medesimo indirizzo della classe
+                        if (stranieriPerIndirizzo.TryGetValue(indirizzo, out var stranieriStessoIndirizzo)
+                            && stranieriStessoIndirizzo.Count > 0)
+                        {
+                             model.Add(LinearExpr.Sum(stranieriStessoIndirizzo.Select(i => (IntVar)x[i, j]).ToArray()) <= maxStranieri);
+                        }
+                    }
+                }
             }
 
 
@@ -257,11 +354,13 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
 
             // BILANCIAMENTO CATEGORIE (Minimizza la differenza tra la classe con più elementi e quella con meno):
             // Più alto è il numero di ragazze, stranieri, DSA, ecc., più importante è bilanciarli equamente.
-            if (ragazzeIdx.Count   > 0) AddPenalty(PenalitaBilancio(model, x, n, m, ragazzeIdx,   "girl"), 100);
-            if (stranieriIdx.Count > 0) AddPenalty(PenalitaBilancio(model, x, n, m, stranieriIdx, "str"),   80);
-            if (dsaIdx.Count       > 0) AddPenalty(PenalitaBilancio(model, x, n, m, dsaIdx,       "dsa"),   80);
-            if (ircIdx.Count       > 0) AddPenalty(PenalitaBilancio(model, x, n, m, ircIdx,       "irc"),   30);
-            if (eccIdx.Count       > 0) AddPenalty(PenalitaBilancio(model, x, n, m, eccIdx,       "ecc"),   20);
+            // Il calcolo avviene rigorosamente per singolo Indirizzo, isolando minimi e massimi per impedire
+            // sbilanciamenti strutturali o penalità impossibili e insormontabili che affliggerebbero OR-Tools.
+            if (ragazzeIdx.Count   > 0) AddPenalty(PenalitaBilancio(model, x, n, m, ragazzeIdx,   "girl", studenti, classi), 100);
+            if (stranieriIdx.Count > 0) AddPenalty(PenalitaBilancio(model, x, n, m, stranieriIdx, "str",  studenti, classi), 80);
+            if (dsaIdx.Count       > 0) AddPenalty(PenalitaBilancio(model, x, n, m, dsaIdx,       "dsa",  studenti, classi), 80);
+            if (ircIdx.Count       > 0) AddPenalty(PenalitaBilancio(model, x, n, m, ircIdx,       "irc",  studenti, classi), 30);
+            if (eccIdx.Count       > 0) AddPenalty(PenalitaBilancio(model, x, n, m, eccIdx,       "ecc",  studenti, classi), 20);
 
 
             // CRITERIO "ANTI-ISOLAMENTO" RAGAZZE:
@@ -328,7 +427,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
 
                 string tag = "sc_" + new string(codice.Where(char.IsLetterOrDigit).Take(8).ToArray());
 
-                AddPenalty(PenalitaBilancio(model, x, n, m, scuolaIdx, tag), 60);
+                AddPenalty(PenalitaBilancio(model, x, n, m, scuolaIdx, tag, studenti, classi), 60);
             }
 
 
@@ -343,9 +442,24 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
 
             var status = solver.Solve(model);
 
-            // Se il solver non trova nemmeno una soluzione fattibile (che rispetti i vincoli P1), lanciamo un'eccezione.
+            // Se il solver non trova nemmeno una soluzione fattibile (che rispetti i vincoli P1)
             if (status != CpSolverStatus.Optimal && status != CpSolverStatus.Feasible)
-                throw new DomainException($"OR-Tools non ha trovato una soluzione fattibile (status: {status}). " + "Verificare che i vincoli P1 siano soddisfacibili.");
+            {
+                if (!opzioni.ConsentiSforo)
+                {
+                    // Fallback automatico: consente lo sforo dei limiti (ammorbidisce la capienza) e riprova.
+                    // Cloniamo le opzioni per evitare side-effect indesiderati sull'istanza originale passata dal chiamante.
+                    var fallbackOpzioni = opzioni.Clone();
+                    fallbackOpzioni.ConsentiSforo = true;
+                    return RisolviConOrTools(studenti, classi, fallbackOpzioni, coppiePreferenze);
+                }
+                else
+                {
+                    // Se fallisce anche col ConsentiSforo attivo, lancerà un messaggio specifico
+                    throw new DomainException($"OR-Tools non ha trovato una soluzione fattibile nemmeno dopo aver consentito lo sforo dei limiti (Fallback attempt: status {status}). " + 
+                                              "Questo indica un conflitto strutturale nei vincoli hard P1 (es. troppi studenti/disabili/stranieri rispetto alle classi dell'indirizzo scelti). Controllare i [P1-WARN] nei log.");
+                }
+            }
 
 
             // ESTRAZIONE DEI RISULTATI:
@@ -363,30 +477,60 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         }
 
 
-        // LOGICA DI CALCOLO DELLO SBILANCIAMENTO:
-        // Crea una variabile intera che rappresenta la differenza tra il conteggio massimo di una categoria 
-        // in una classe e il conteggio minimo. Il solver cercherà di rendere questa differenza il più piccola possibile.
-        private static IntVar PenalitaBilancio(CpModel model, BoolVar[,] x, int n, int m, List<int> groupIdx, string tag)
+        // LOGICA DI CALCOLO DELLO SBILANCIAMENTO (PER INDIRIZZO):
+        // Calcola lo sbilanciamento (max - min) in modo perfettamente isolato rispetto ad ogni singolo IndirizzoScolastico.
+        // Lo sbilanciamento finale restituito è la somma delle penalità individuali di tutti gli Indirizzi.
+        private static IntVar PenalitaBilancio(CpModel model, BoolVar[,] x, int n, int m, List<int> groupIdx, string tag, List<Studente> studenti, List<ClassePrima> classi)
         {
-            var count = new IntVar[m];
-            for (int j = 0; j < m; j++)
+            var indirizziDistinti = classi.Select(c => c.Indirizzo.Nome).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            var imbalancePerIndirizzo = new List<IntVar>();
+
+            foreach(var strIndirizzo in indirizziDistinti)
             {
-                // Somma le variabili x[i, j] per tutti gli studenti i che appartengono al gruppo specifico
-                count[j] = model.NewIntVar(0, groupIdx.Count, $"{tag}_cnt_{j}");
-                model.Add(count[j] == LinearExpr.Sum(groupIdx.Select(i => (IntVar)x[i, j]).ToArray()));
+                // Trova gli indici delle classi che appartengono a questo indirizzo
+                var classiSottoinsieme = classi.Select((c, index) => new { Class = c, Index = index })
+                                               .Where(ci => string.Equals(ci.Class.Indirizzo.Nome, strIndirizzo, StringComparison.OrdinalIgnoreCase))
+                                               .Select(ci => ci.Index)
+                                               .ToList();
+
+                if(classiSottoinsieme.Count <= 1) continue; // Sbilanciamento assente/irragionevole su 0 o 1 classe
+
+                // Identifica gli studenti interessati da questa categoria E appartenti a questo indirizzo
+                var studentiSottoinsieme = groupIdx
+                                           .Where(i => string.Equals(studenti[i].IndirizzoScolastico.Nome, strIndirizzo, StringComparison.OrdinalIgnoreCase))
+                                           .ToList();
+                
+                // Se non c'è nessuno di questa categoria per questo indirizzo, lo sbilanciamento è nullo.
+                if(studentiSottoinsieme.Count == 0) continue;
+
+                var count = new IntVar[classiSottoinsieme.Count];
+                for(int idx = 0; idx < classiSottoinsieme.Count; idx++)
+                {
+                    int j = classiSottoinsieme[idx];
+                    count[idx] = model.NewIntVar(0, studentiSottoinsieme.Count, $"{tag}_{strIndirizzo}_cnt_{j}");
+                    model.Add(count[idx] == LinearExpr.Sum(studentiSottoinsieme.Select(i => (IntVar)x[i, j]).ToArray()));
+                }
+
+                // Max e min conteggi circoscritti a questo indirizzo
+                var maxV = model.NewIntVar(0, studentiSottoinsieme.Count, $"{tag}_{strIndirizzo}_max");
+                var minV = model.NewIntVar(0, studentiSottoinsieme.Count, $"{tag}_{strIndirizzo}_min");
+                model.AddMaxEquality(maxV, count);
+                model.AddMinEquality(minV, count);
+
+                // Calcola sbilanciamento e memorizzalo
+                var imbalance = model.NewIntVar(0, studentiSottoinsieme.Count, $"{tag}_{strIndirizzo}_imb");
+                model.Add(imbalance == maxV - minV);
+                
+                imbalancePerIndirizzo.Add(imbalance);
             }
 
-            // Identifica il valore massimo e minimo tra tutte le classi
-            var maxV = model.NewIntVar(0, groupIdx.Count, $"{tag}_max");
-            var minV = model.NewIntVar(0, groupIdx.Count, $"{tag}_min");
-            model.AddMaxEquality(maxV, count);
-            model.AddMinEquality(minV, count);
+            if(imbalancePerIndirizzo.Count == 0) return model.NewConstant(0);
 
-            // Lo sbilanciamento è la differenza tra massimo e minimo
-            var imbalance = model.NewIntVar(0, groupIdx.Count, $"{tag}_imb");
-            model.Add(imbalance == maxV - minV);
-
-            return imbalance;
+            // La penalità globale della categoria "tag" è la somma lineare degli sbilanciamenti dei singoli indirizzi.
+            var totalImbalance = model.NewIntVar(0, groupIdx.Count, $"{tag}_total_imb");
+            model.Add(totalImbalance == LinearExpr.Sum(imbalancePerIndirizzo.ToArray()));
+            
+            return totalImbalance;
         }
 
 

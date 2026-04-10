@@ -124,8 +124,6 @@ namespace BlaisePascal.ProjectWork3E.Wpf
                 return;
             }
 
-            BtnDownload.IsEnabled = false;
-            BtnImport.IsEnabled   = false;
             ProgBar.Visibility    = Visibility.Visible;
             TxtStatus.Visibility  = Visibility.Visible;
             TxtStatus.Text        = "Distribuzione in corso... (OR-Tools, max 30s)";
@@ -133,34 +131,49 @@ namespace BlaisePascal.ProjectWork3E.Wpf
 
             try
             {
+                // Disabilita subito nel blocco in modo da coprire tutta la computazione
+                BtnDownload.IsEnabled = false;
+                BtnImport.IsEnabled   = false;
+                
+                // Cede il controllo al thread UI per un istante, aggiornando visibilmente 
+                // lo state "disabled" dei pulsanti prima dello spawn in background.
+                await Task.Yield();
+
                 var useCase   = new DistribuzioneUseCase();
                 var risultato = await useCase.EseguiAsync();
 
-                var sb = new StringBuilder();
-                sb.AppendLine("Distribuzione completata! " + DatiImportatiDto.Alunni.Count + " studenti assegnati.\n");
+                GestisciRisultatoDistribuzione(useCase, risultato);
+            }
+            catch (BlaisePascal.ProjectWork._3E.Domain.Exceptions.ClasseCapienzaSuperataException ex)
+            {
+                // Avvisa l'utente tramite Dialog dedicato WPF che verifica se far ammorbidire i vincoli o annullare.
+                var dialog = new ConfermaCapienzaDialog(ex.NomeClasse, ex.Limite);
+                dialog.Owner = this; // Imposta l'owner per bloccare la UI principale dietro al model.
 
-                int numClasse = 1;
-                foreach (var classe in risultato)
+                if (dialog.ShowDialog() == true)
                 {
-                    sb.AppendLine("-- Classe " + numClasse + " (" + classe.Count + " studenti) --");
-                    foreach (var s in classe.OrderBy(x => x.Cognome).ThenBy(x => x.Nome))
-                        sb.AppendLine("  * " + s.Cognome + " " + s.Nome);
-                    sb.AppendLine();
-                    numClasse++;
-                }
+                    try
+                    {
+                        // Costruisce le opzioni con SezioniPerIndirizzo corrette dai dati importati,
+                        // poi aggiunge ConsentiSforo = true per il tentativo con sforo.
+                        var opzioniFallback = DistribuzioneUseCase.CostruisciOpzioniDaDatiImportati();
+                        opzioniFallback.ConsentiSforo = true;
 
-                if (useCase.MatchIncerti.Count > 0)
+                        var useCaseSforo = new DistribuzioneUseCase();
+                        var risultatoSforo = await useCaseSforo.EseguiAsync(opzioniFallback);
+
+                        GestisciRisultatoDistribuzione(useCaseSforo, risultatoSforo);
+                    }
+                    catch (Exception exSforo)
+                    {
+                        MessageBox.Show("Rilevato un errore irrisolvibile anche tentando la distribuzione con capienza allargata:\n" + exSforo.Message, "Errore Strutturale Infeasibility", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+                else
                 {
-                    sb.AppendLine("\nATTENZIONE: " + useCase.MatchIncerti.Count + " preferenze incerte:");
-                    foreach (var m in useCase.MatchIncerti)
-                        sb.AppendLine("  * " + m.Messaggio);
+                    // L'utente ha cliccato "Annulla" o chiuso il dialog
+                    MessageBox.Show("Distribuzione interrotta. La capienza limite deve essere garantita o aumentata modificando i dati.", "Operazione Annullata", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
-
-                // Genera l'Excel
-                var esportatore = new BlaisePascal.ProjectWork._3E.Application.ExportModels.EsportazioneDatiExcel();
-                esportatore.Esporta(risultato);
-
-                MessageBox.Show("Distribuzione completata con successo!\nIl file Excel è stato generato e aperto.\n\n" + (useCase.MatchIncerti.Count > 0 ? "Ci sono match incerti, vedi l'altro avviso." : ""), "Successo", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (InvalidOperationException ex)
             {
@@ -183,6 +196,35 @@ namespace BlaisePascal.ProjectWork3E.Wpf
                 TxtStatus.Visibility    = Visibility.Collapsed;
                 ProgBar.IsIndeterminate = false;
             }
+        }
+
+        private void GestisciRisultatoDistribuzione(DistribuzioneUseCase useCase, List<List<BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.Studente>> risultato)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("Distribuzione completata! " + BlaisePascal.ProjectWork._3E.Application.ImportModels.DatiImportatiDto.Alunni.Count + " studenti assegnati.\n");
+
+            int numClasse = 1;
+            foreach (var classe in risultato)
+            {
+                sb.AppendLine("-- Classe " + numClasse + " (" + classe.Count + " studenti) --");
+                foreach (var s in classe.OrderBy(x => x.Cognome).ThenBy(x => x.Nome))
+                    sb.AppendLine("  * " + s.Cognome + " " + s.Nome);
+                sb.AppendLine();
+                numClasse++;
+            }
+
+            if (useCase.MatchIncerti.Count > 0)
+            {
+                sb.AppendLine("\nATTENZIONE: " + useCase.MatchIncerti.Count + " preferenze incerte:");
+                foreach (var m in useCase.MatchIncerti)
+                    sb.AppendLine("  * " + m.Messaggio);
+            }
+
+            // Genera l'Excel
+            var esportatore = new BlaisePascal.ProjectWork._3E.Application.ExportModels.EsportazioneDatiExcel();
+            esportatore.Esporta(risultato, useCase.ClassiGenerate.ToList());
+
+            MessageBox.Show("Distribuzione completata con successo!\nIl file Excel è stato generato e aperto.\n\n" + (useCase.MatchIncerti.Count > 0 ? "Ci sono match incerti, vedi l'altro avviso." : ""), "Successo", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 }

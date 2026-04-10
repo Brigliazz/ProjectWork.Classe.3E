@@ -13,10 +13,26 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
 
         public bool ConsentiSforo { get; set; } = false;
 
+        // In modalità "Sforo", questo limite pone un tetto rigido invalicabile per il solver (es. capienza fisica aula).
+        public int LimiteMassimoAssoluto { get; set; } = 32;
+
         public bool UsaPreferenze { get; set; } = true;
 
         public Dictionary<string, int> SezioniPerIndirizzo { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
         public static OpzioniDistribuzione Default => new OpzioniDistribuzione();
+
+        public OpzioniDistribuzione Clone()
+        {
+            return new OpzioniDistribuzione
+            {
+                LimiteStandard = this.LimiteStandard,
+                LimiteDisabili = this.LimiteDisabili,
+                ConsentiSforo = this.ConsentiSforo,
+                LimiteMassimoAssoluto = this.LimiteMassimoAssoluto,
+                UsaPreferenze = this.UsaPreferenze,
+                SezioniPerIndirizzo = new Dictionary<string, int>(this.SezioniPerIndirizzo, StringComparer.OrdinalIgnoreCase)
+            };
+        }
     }
 }

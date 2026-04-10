@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using BlaisePascal.ProjectWork._3E.Application.ImportModels;
 using BlaisePascal.ProjectWork._3E.Application.Services;
+using BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima;
 using BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente;
 using BlaisePascal.ProjectWork._3E.Domain.Services;
 using BlaisePascal.ProjectWork._3E.Infrastructure.Persistence;
@@ -40,7 +41,8 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Services
             var studentiDominio = StudenteMapper.MappaStudenti(
                 DatiImportatiDto.Alunni,
                 DatiImportatiDto.PreferenzeCompagni,
-                DatiImportatiDto.Scuole);
+                DatiImportatiDto.Scuole,
+                DatiImportatiDto.Scelte);
 
             if (studentiDominio.Count == 0)
                 throw new InvalidOperationException(
@@ -81,6 +83,9 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Services
             // Esponi i match incerti per eventuale visualizzazione nella UI
             MatchIncerti = service.MatchIncerti;
 
+            // Esponi le classi generate per l'esportazione Excel
+            ClassiGenerate = (await classeRepo.GetAllAsync()).AsReadOnly();
+
             // Pulizia del file temporaneo (best-effort)
             try { File.Delete(tempDbPath); } catch { /* non critico */ }
 
@@ -91,9 +96,13 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Services
         public IReadOnlyList<RisultatoMatch> MatchIncerti { get; private set; } =
             Array.Empty<RisultatoMatch>();
 
-        // Helper: costruisce OpzioniDistribuzione dai dati gia nel DTO globale
+        /// <summary>Classi generate dalla distribuzione (con Sezione e Indirizzo reali).</summary>
+        public IReadOnlyList<ClassePrima> ClassiGenerate { get; private set; } =
+            Array.Empty<ClassePrima>();
 
-        private static OpzioniDistribuzione CostruisciOpzioniDaDatiImportati()
+        // Helper: costruisce OpzioniDistribuzione dai dati gia nel DTO globale.
+        // Public per permettere la chiamata dal layer WPF nel caso di fallback sforo.
+        public static OpzioniDistribuzione CostruisciOpzioniDaDatiImportati()
         {
             var sezioni = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BlaisePascal.ProjectWork._3E.Application.ImportModels;
+using BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima;
 using BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente;
 using BlaisePascal.ProjectWork._3E.Domain.Enums;
 namespace BlaisePascal.ProjectWork._3E.Application.Services
@@ -24,7 +25,8 @@ namespace BlaisePascal.ProjectWork._3E.Application.Services
         public static List<Studente> MappaStudenti(
             List<StudenteImportDto> alunniDto,
             List<PreferenzaCompagnoImportDto> preferenzeDto,
-            List<ScuolaProvImportDto> scuoleDto)
+            List<ScuolaProvImportDto> scuoleDto,
+            List<SceltaImportDto> scelteDto)
         {
             // Indice CF→preferenza per ricerca O(1)
             var prefByCf = preferenzeDto
@@ -38,13 +40,19 @@ namespace BlaisePascal.ProjectWork._3E.Application.Services
                 .ToDictionary(s => s.CodiceFiscaleStudente!, s => s.CodiceScuola ?? "SCONOSCIUTA",
                               StringComparer.OrdinalIgnoreCase);
 
+            // Indice CF→indirizzo scelto per ricerca O(1)
+            var indirizzoByCf = scelteDto
+                .Where(s => !string.IsNullOrWhiteSpace(s.CodiceFiscaleStudente))
+                .ToDictionary(s => s.CodiceFiscaleStudente!, s => s.IndirizzoScelto ?? string.Empty,
+                              StringComparer.OrdinalIgnoreCase);
+
             var studenti = new List<Studente>(alunniDto.Count);
 
             foreach (var dto in alunniDto)
             {
                 try
                 {
-                    studenti.Add(MappaSingolo(dto, prefByCf, scuolaByCf));
+                    studenti.Add(MappaSingolo(dto, prefByCf, scuolaByCf, indirizzoByCf));
                 }
                 catch (Exception ex)
                 {
@@ -63,7 +71,8 @@ namespace BlaisePascal.ProjectWork._3E.Application.Services
         private static Studente MappaSingolo(
             StudenteImportDto dto,
             Dictionary<string, string> prefByCf,
-            Dictionary<string, string> scuolaByCf)
+            Dictionary<string, string> scuolaByCf,
+            Dictionary<string, string> indirizzoByCf)
         {
             var sesso       = dto.Sesso ? Sesso.Femmina : Sesso.Maschio;
             var cittadinanza = MappaCittadinanza(dto.Cittadinanza);
@@ -96,6 +105,26 @@ namespace BlaisePascal.ProjectWork._3E.Application.Services
             // Voto esame: 0 viene trattato come assente
             int? votoEsame = dto.VotoEsameTerzaMedia > 0 ? dto.VotoEsameTerzaMedia : null;
 
+            // Indirizzo scolastico scelto dallo studente
+            IndirizzoScolastico? indirizzoScolastico = null;
+            if (!string.IsNullOrWhiteSpace(dto.CodiceFiscale) &&
+                indirizzoByCf.TryGetValue(dto.CodiceFiscale, out var indirizzoTesto) &&
+                !string.IsNullOrWhiteSpace(indirizzoTesto))
+            {
+                // Logica di normalizzazione e fallback
+                string indirizzoNormalizzato = NormalizzaIndirizzo(indirizzoTesto);
+
+                try
+                {
+                    indirizzoScolastico = IndirizzoScolastico.Crea(indirizzoNormalizzato);
+                }
+                catch
+                {
+                    Console.WriteLine($"[StudenteMapper] WARN — Indirizzo '{indirizzoTesto}' non riconosciuto per CF={dto.CodiceFiscale}: assegnato Informatica come default.");
+                    indirizzoScolastico = IndirizzoScolastico.Informatica;
+                }
+            }
+
             return Studente.Crea(
                 nome:                    dto.Nome     ?? string.Empty,
                 cognome:                 dto.Cognome  ?? string.Empty,
@@ -108,8 +137,37 @@ namespace BlaisePascal.ProjectWork._3E.Application.Services
                 profiloBES:              profiloBES,
                 faReligione:             dto.FaReligione,
                 votoEsame:               votoEsame,
-                sceltaCompagno:          sceltaCompagno
+                sceltaCompagno:          sceltaCompagno,
+                indirizzoScolastico:     indirizzoScolastico
             );
+        }
+
+        // ──────────────────────────────────────────────────────────────
+        // Helper: normalizzazione testuale per IndirizzoScolastico
+        // ──────────────────────────────────────────────────────────────
+
+        private static string NormalizzaIndirizzo(string grezzo)
+        {
+            if (string.IsNullOrWhiteSpace(grezzo)) return grezzo;
+            var pulito = grezzo.Trim();
+
+            // Semplice match per gestire varianti e case incerti
+            if (pulito.Equals("INFO", StringComparison.OrdinalIgnoreCase) ||
+                pulito.Equals("INFOR", StringComparison.OrdinalIgnoreCase) ||
+                pulito.StartsWith("INFORM", StringComparison.OrdinalIgnoreCase))
+                return "Informatica";
+
+            if (pulito.Equals("ELE", StringComparison.OrdinalIgnoreCase) || 
+                pulito.Equals("ELETTRONICA", StringComparison.OrdinalIgnoreCase) ||
+                pulito.StartsWith("AUTOMAZ", StringComparison.OrdinalIgnoreCase))
+                return "Automazione";
+
+            if (pulito.Equals("BIOLOGIA", StringComparison.OrdinalIgnoreCase) || 
+                pulito.Equals("BIOTECNOLOGIE", StringComparison.OrdinalIgnoreCase) ||
+                pulito.StartsWith("BIO", StringComparison.OrdinalIgnoreCase))
+                return "Bio";
+
+            return pulito; // Ritorna quello che è se non abbiamo alias noti, fallirà nel Crea()
         }
 
         // ──────────────────────────────────────────────────────────────

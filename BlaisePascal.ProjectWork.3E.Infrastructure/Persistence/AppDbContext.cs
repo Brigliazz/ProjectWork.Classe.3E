@@ -52,6 +52,14 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Persistence
                         t => string.IsNullOrWhiteSpace(t) ? null : SceltaCompagno.Crea(t))
                     .HasColumnName("SceltaCompagno");
 
+                // Value Object: IndirizzoScolastico
+                entity.Property(s => s.IndirizzoScolastico)
+                    .HasConversion(
+                        i => i.Nome,
+                        n => IndirizzoScolastico.Crea(n))
+                    .HasColumnName("IndirizzoScolastico")
+                    .IsRequired();
+
                 // FK verso ClassePrima — SetNull on delete
                 entity.HasOne<ClassePrima>()
                     .WithMany()

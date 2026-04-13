@@ -1,4 +1,4 @@
-using BlaisePascal.ProjectWork._3E.Domain.Services;
+using BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using System;
@@ -12,7 +12,7 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
 {
     public class EsportazioneDatiExcel
     {
-        public void Esporta(List<List<BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.Studente>> matriceClassi)
+        public void Esporta(List<List<BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.Studente>> matriceClassi, List<ClassePrima> classi)
         {
             // Licenza gratuita EPPlus
             ExcelPackage.License.SetNonCommercialOrganization("PCTO School Project");
@@ -23,26 +23,40 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
                 return;
             }
 
+            // Dizionario per cercare la classe tramite Id
+            var classiById = classi.ToDictionary(c => c.Id);
+
             using (var package = new ExcelPackage())
             {
-                int classeNum = 1;
-
                 foreach (var studenti in matriceClassi)
                 {
                     if (studenti.Count == 0) continue;
 
-                    // Nome del foglio
-                    string nomeClasse = $"Classe {classeNum}";
+                    // Recupera la classe reale dal ClasseId del primo studente
+                    string nomeSezione;
+                    string titoloClasse;
+                    var classeId = studenti.First().ClasseId;
+                    if (classeId.HasValue && classiById.TryGetValue(classeId.Value, out var classeTarget))
+                    {
+                        nomeSezione = $"1{classeTarget.Sezione.Valore}";
+                        titoloClasse = $"Classe 1{classeTarget.Sezione.Valore} - {classeTarget.Indirizzo.Nome}";
+                    }
+                    else
+                    {
+                        nomeSezione = "Classe";
+                        titoloClasse = "Classe";
+                    }
+
                     // Trunca il nome a 31 caratteri se troppo lungo (limite Excel)
-                    if (nomeClasse.Length > 31)
-                        nomeClasse = nomeClasse.Substring(0, 31);
+                    if (nomeSezione.Length > 31)
+                        nomeSezione = nomeSezione.Substring(0, 31);
 
                     // Creazione foglio Excel
-                    var worksheet = package.Workbook.Worksheets.Add(nomeClasse);
+                    var worksheet = package.Workbook.Worksheets.Add(nomeSezione);
 
                     // Titolo classe
                     worksheet.Cells[1, 1, 1, 3].Merge = true;
-                    worksheet.Cells[1, 1].Value = "Classe: " + nomeClasse;
+                    worksheet.Cells[1, 1].Value = titoloClasse;
 
                     // Intestazioni
                     worksheet.Cells[3, 1].Value = "n";
@@ -87,7 +101,7 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
                         range.Style.Border.Right.Style = ExcelBorderStyle.Thin;
                     }
 
-                    classeNum++;
+
                 }
 
                 // Salvataggio su desktop del file con solo le informazioni base(elenco con nome e cognome)

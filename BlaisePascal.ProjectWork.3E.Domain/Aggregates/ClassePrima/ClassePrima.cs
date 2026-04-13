@@ -46,6 +46,11 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
 
         public void AggiungiStudente(Studente.Studente studente, BlaisePascal.ProjectWork._3E.Domain.Services.OpzioniDistribuzione opzioni)
         {
+            // Guard di ultima istanza invalicabile (es. per simulazioni solver sfuggite di mano)
+            if (NumeroStudenti >= opzioni.LimiteMassimoAssoluto)
+                throw new ClasseCapienzaSuperataException(
+                    Sezione.Valore, opzioni.LimiteMassimoAssoluto,
+                    $"La classe {Sezione.Valore} non ha la capienza strutturale e di sicurezza per eccedere i {opzioni.LimiteMassimoAssoluto} posti.");
             // Invariante P1: max 1 studente con disabilità per classe
             if (studente.ProfiloBES.HasDisabilita)
             {
@@ -54,7 +59,8 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
                         $"La classe {Sezione.Valore} ha già uno studente con disabilità. Max {MaxStudentiConDisabilitaPerClasse} per classe.");
 
                 if (!opzioni.ConsentiSforo && NumeroStudenti >= opzioni.LimiteDisabili)
-                    throw new DomainException(
+                    throw new ClasseCapienzaSuperataException(
+                        Sezione.Valore, opzioni.LimiteDisabili,
                         $"La classe {Sezione.Valore} ha già {NumeroStudenti} studenti. Con uno studente con disabilità il massimo è {opzioni.LimiteDisabili}.");
 
                 HasStudenteConDisabilita = true;
@@ -66,7 +72,8 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
                 {
                     int limite = HasStudenteConDisabilita ? opzioni.LimiteDisabili : opzioni.LimiteStandard;
                     if (NumeroStudenti >= limite)
-                        throw new DomainException(
+                        throw new ClasseCapienzaSuperataException(
+                            Sezione.Valore, limite,
                             $"La classe {Sezione.Valore} ha raggiunto il limite di {limite} studenti.");
                 }
             }
@@ -102,10 +109,9 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
 
             if (opzioni.ConsentiSforo)
             {
-                // In modalità sforo diamo un margine fittizio equo a tutte le classi,
-                // così che chi ha meno alunni risulti sempre avere 'più posti liberi'
-                // e la distribuzione continui a spalmare uniformemente l'eccedenza.
-                limite += 50;
+                // In modalità sforo diamo un margine basato sul limite assoluto massimo.
+                // Così la classe può ospitare fino a LimiteMassimoAssoluto (es. 32).
+                limite = opzioni.LimiteMassimoAssoluto;
             }
 
             return limite - NumeroStudenti;

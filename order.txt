@@ -1,0 +1,134 @@
+Ecco il prompt pronto da copiare e dare ad un'altra istanza:
+
+---
+
+## Contesto del progetto
+
+Si tratta di una soluzione C# .NET con architettura DDD (Domain-Driven Design) per la distribuzione automatica di studenti delle scuole medie nelle classi prime di un istituto tecnico. Il solver usa **Google OR-Tools CP-SAT**. La soluzione è strutturata nei seguenti layer:
+
+- `Domain` — entità, aggregati, value objects, servizi di dominio
+- `Application` — DTO di importazione, mapper
+- `Infrastructure` — repository EF Core, use case orchestratore
+- `Wpf` — frontend WPF
+
+---
+
+## Bug da correggere
+
+### Descrizione del problema
+
+L'algoritmo di distribuzione **ignora l'indirizzo scolastico scelto dallo studente** (Automazione / Informatica / Bio) come criterio di assegnazione. Di conseguenza, studenti che hanno scelto Informatica possono essere assegnati a classi di Automazione o Bio, perché il solver ottimizza i criteri soft (bilanciamento genere, DSA, ecc.) senza alcun vincolo che rispetti l'indirizzo.
+
+### Root cause
+
+Il problema si manifesta in tre punti separati:
+
+1. **`Studente.cs`** non ha una proprietà `IndirizzoRichiesto`. Il campo `Indirizzo` del DTO (`StudenteImportDto`) viene usato solo come fallback per `CodiceScuolaProvenienza` nel mapper e poi scartato — nessun dato sull'indirizzo scelto sopravvive alla conversione DTO → entità di dominio.
+
+2. **`DistribuzioneClassiService.cs`** — il metodo `RisolviConOrTools` non ha alcun vincolo che impedisca `x[i,j] = 1` quando `classi[j].Indirizzo.Nome != studente.IndirizzoRichiesto`. I soft objectives (bilanciamento ragazze, stranieri, DSA...) guidano il solver anche oltre i confini dell'indirizzo scelto.
+
+3. **`StudenteMapper.cs`** — non esiste alcuna logica di normalizzazione del valore `dto.Indirizzo` verso i nomi canonici del dominio (`"Automazione"`, `"Informatica"`, `"Bio"`). Il file Excel può contenere varianti come `"Elettronica"`, `"ELEN"`, `"ITIA"`, `"Biotecnologie"` che devono essere mappate.
+
+---
+
+## Modifiche da applicare
+
+### 1. `BlaisePascal.ProjectWork.3E.Domain/Aggregates/Studente/Studente.cs`
+
+Aggiungere la proprietà `IndirizzoRichiesto` nella sezione "Riferimenti":
+
+```csharp
+// Riferimenti
+public string CodiceScuolaProvenienza { get; private set; }
+
+/// <summary>
+/// Indirizzo scolastico richiesto dallo studente (Automazione, Informatica, Bio).
+/// Vincolo hard: lo studente può essere assegnato SOLO a classi di questo indirizzo.
+/// </summary>
+public string IndirizzoRichiesto { get; private set; }
+```
+
+Aggiornare il costruttore privato aggiungendo il parametro `string indirizzoRichiesto` dopo `codiceScuolaProvenienza` e assegnando `IndirizzoRichiesto = indirizzoRichiesto;`.
+
+Aggiornare la factory `Crea(...)` con lo stesso parametro aggiuntivo, passandolo al costruttore.
+
+---
+
+### 2. `BlaisePascal.ProjectWork.3E.Application/Services/StudenteMapper.cs`
+
+In `MappaSingolo`, prima del `return Studente.Crea(...)`, aggiungere:
+
+```csharp
+// Indirizzo richiesto: normalizza i valori dal file Excel verso i nomi canonici del dominio
+string indirizzoRichiesto = NormalizzaIndirizzo(dto.Indirizzo);
+```
+
+Aggiungere il parametro `indirizzoRichiesto: indirizzoRichiesto` alla chiamata `Studente.Crea(...)`.
+
+Aggiungere il metodo privato statico in fondo alla classe:
+
+```csharp
+private static string NormalizzaIndirizzo(string? valore)
+{
+    if (string.IsNullOrWhiteSpace(valore))
+        return string.Empty;
+
+    var v = valore.Trim();
+
+    if (v.StartsWith("Auto", StringComparison.OrdinalIgnoreCase) ||
+        v.Equals("ELEN", StringComparison.OrdinalIgnoreCase) ||
+        v.Equals("Elettronica", StringComparison.OrdinalIgnoreCase))
+        return "Automazione";
+
+    if (v.StartsWith("Info", StringComparison.OrdinalIgnoreCase) ||
+        v.Equals("ITIA", StringComparison.OrdinalIgnoreCase))
+        return "Informatica";
+
+    if (v.StartsWith("Bio", StringComparison.OrdinalIgnoreCase) ||
+        v.StartsWith("Biot", StringComparison.OrdinalIgnoreCase))
+        return "Bio";
+
+    Console.WriteLine($"[StudenteMapper] WARN — Indirizzo non riconosciuto: '{valore}', studente sarà distribuito senza vincolo indirizzo.");
+    return string.Empty;
+}
+```
+
+---
+
+### 3. `BlaisePascal.ProjectWork.3E.Domain/Services/DistribuzioneClassiService.cs`
+
+In `RisolviConOrTools`, subito **dopo** la creazione della matrice `x[i,j]` e **prima** del vincolo `AddExactlyOne`, inserire il seguente blocco:
+
+```csharp
+// VINCOLO HARD (PRIORITÀ ASSOLUTA): Indirizzo scolastico richiesto.
+// Ogni studente può essere assegnato SOLO a classi del suo indirizzo scelto.
+// Questo vincolo è imposto prima di qualsiasi altra considerazione:
+// un ragazzo che ha scelto Informatica non può finire in Automazione o Bio.
+// Gli studenti senza indirizzo riconosciuto (IndirizzoRichiesto vuoto) non
+// ricevono questo vincolo e possono essere assegnati a qualunque classe.
+for (int i = 0; i < n; i++)
+{
+    var indRichiesto = studenti[i].IndirizzoRichiesto;
+    if (string.IsNullOrWhiteSpace(indRichiesto)) continue;
+
+    for (int j = 0; j < m; j++)
+    {
+        if (!string.Equals(classi[j].Indirizzo.Nome, indRichiesto, StringComparison.OrdinalIgnoreCase))
+            model.Add(LinearExpr.Sum(new[] { (IntVar)x[i, j] }) == 0);
+    }
+}
+```
+
+Aggiornare il commento dell'intestazione del metodo per includere la nuova riga tra i vincoli hard P1:
+```
+//     • [PRIORITÀ ASSOLUTA] Indirizzo richiesto: x[i,j]=0 se classi[j].Indirizzo != studente.IndirizzoRichiesto
+```
+
+---
+
+## Comportamento atteso dopo la fix
+
+- Uno studente con `IndirizzoRichiesto = "Informatica"` viene assegnato **esclusivamente** a classi con `Indirizzo.Nome == "Informatica"`.
+- Il bilanciamento dei criteri soft (genere, DSA, stranieri, preferenze compagno, scuola di provenienza) continua a funzionare normalmente, ma opera **all'interno** delle classi dell'indirizzo corretto.
+- Studenti con indirizzo non riconosciuto (`IndirizzoRichiesto == ""`) non ricevono il vincolo e rimangono distribuibili liberamente — comportamento di fallback sicuro.
+- Il resto dell'architettura DDD (repository, use case, WPF) non richiede modifiche: `IndirizzoRichiesto` è una proprietà del dominio letta passivamente.

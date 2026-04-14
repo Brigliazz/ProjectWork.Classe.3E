@@ -93,5 +93,11 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente
             ClasseId = null;
             Stato = StatoAssegnazione.NonAssegnato;
         }
+
+        public void ImpostaPreferenza(string testo)
+        {
+            if (!string.IsNullOrWhiteSpace(testo))
+                SceltaCompagno = SceltaCompagno.Crea(testo);
+        }
     }
 }

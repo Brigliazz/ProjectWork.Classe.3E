@@ -110,7 +110,8 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices
                             FaReligione = EstraiDato(row, idxReligione).ToLower() == "si" || EstraiDato(row, idxReligione).ToLower() == "sì",
                             DisabilitaAssistenzaBase = EstraiDato(row, idxAssBase).ToLower() == "si" || EstraiDato(row, idxAssBase).ToLower() == "sì",
                             DataDiNascita = EstraiDato(row, idxDataNascita),
-                            DataArrivoInItalia = EstraiDato(row, idxDataArrivo)
+                            DataArrivoInItalia = EstraiDato(row, idxDataArrivo),
+                            PreferenzaCompagno = idxPrefNomeCompagno >= 0 ? EstraiDato(row, idxPrefNomeCompagno) : null
                         });
 
                         DatiImportatiDto.Scelte.Add(new SceltaImportDto { 
@@ -119,7 +120,18 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices
                         });
                         DatiImportatiDto.Scuole.Add(new ScuolaProvImportDto { CodiceScuola = EstraiDato(row, idxCodScuola), DenominazioneScuola = EstraiDato(row, idxNomeScuola), ComuneScuola = EstraiDato(row, idxComuneScuola), CodiceFiscaleStudente = EstraiDato(row, idxCf), });
                         DatiImportatiDto.Genitori.Add(new GenitoreImportDTO { Numero = EstraiDato(row, idxTelGenitore1), Nome = EstraiDato(row, idxNomeGenitore1), Cognome = EstraiDato(row, idxCognomeGenitore1), Mail = EstraiDato(row, idxMailGenitore1), CodiceFiscale = EstraiDato(row, idxCf), });
-                        DatiImportatiDto.PreferenzeCompagni.Add(new PreferenzaCompagnoImportDto { NomeStudenteScelto = EstraiDato(row, idxPrefNomeCompagno), CodiceFiscaleStudente = EstraiDato(row, idxCf), });
+                    }
+
+                    foreach (var alunno in DatiImportatiDto.Alunni)
+                    {
+                        if (!string.IsNullOrWhiteSpace(alunno.PreferenzaCompagno))
+                        {
+                            DatiImportatiDto.PreferenzeCompagni.Add(new PreferenzaCompagnoImportDto
+                            {
+                                NomeStudenteScelto = alunno.PreferenzaCompagno,
+                                CodiceFiscaleStudente = alunno.CodiceFiscale
+                            });
+                        }
                     }
                 }
 

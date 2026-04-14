@@ -22,14 +22,18 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Repositories
 
         public async Task<List<Studente>> GetNonAssegnatiAsync()
         {
-            return await _context.Studenti
+            var studenti = await _context.Studenti
                 .Where(s => s.Stato == StatoAssegnazione.NonAssegnato)
                 .ToListAsync();
+            CaricaPreferenze(studenti);
+            return studenti;
         }
 
         public async Task<List<Studente>> GetAllAsync()
         {
-            return await _context.Studenti.ToListAsync();
+            var studenti = await _context.Studenti.ToListAsync();
+            CaricaPreferenze(studenti);
+            return studenti;
         }
 
         public async Task AddAsync(Studente studente)
@@ -46,6 +50,34 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.Repositories
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();
+        }
+
+        private void CaricaPreferenze(List<Studente> studenti)
+        {
+            if (studenti.Count == 0) return;
+
+            using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=studenti.db");
+            connection.Open();
+            
+            foreach (var studente in studenti)
+            {
+                using var command = connection.CreateCommand();
+                command.CommandText = "SELECT NomeStudenteScelto FROM PreferenzeCompagno WHERE CodiceFiscaleStudente = @cf LIMIT 1";
+                command.Parameters.AddWithValue("@cf", studente.CodiceFiscale);
+                
+                using var reader = command.ExecuteReader();
+                if (reader.Read())
+                {
+                    if (!reader.IsDBNull(0))
+                    {
+                        var nomeScelto = reader.GetString(0);
+                        if (!string.IsNullOrWhiteSpace(nomeScelto))
+                        {
+                            studente.ImpostaPreferenza(nomeScelto);
+                        }
+                    }
+                }
+            }
         }
     }
 }

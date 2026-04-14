@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -22,6 +22,7 @@ namespace BlaisePascal.ProjectWork._3E.Application.ImportModels
         public string DataArrivoInItalia { get; set; } 
         public string DataDiNascita { get; set; }
         public bool DisabilitaAssistenzaBase { get; set; }
+        public string? PreferenzaCompagno { get; set; }
 
         public int Id { get; set; }
     }

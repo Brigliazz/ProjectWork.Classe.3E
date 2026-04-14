@@ -1,4 +1,7 @@
+using System;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -18,7 +21,6 @@ using BlaisePascal.ProjectWork._3E.Application.ImportModels;
 
 namespace BlaisePascal.ProjectWork3E.Wpf
 {
-
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
@@ -45,19 +47,19 @@ namespace BlaisePascal.ProjectWork3E.Wpf
             }
         }
 
-        private void BtnImport_Click(object sender, RoutedEventArgs e)
+        // Metodo diventato ASYNC per permettere l'animazione a schermo
+        private async void BtnImport_Click(object sender, RoutedEventArgs e)
         {
             importedFilePath = TxtFilePath.Text;
 
-            // 1. Controllo del file (spostato IN CIMA per evitare errori se il file è vuoto)
+            // 1. Controllo del file
             if (string.IsNullOrWhiteSpace(importedFilePath))
             {
                 MessageBox.Show("Seleziona prima un file Excel usando il tasto 'Sfoglia file'.", "Attenzione", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // 2. Lettura, conversione e salvataggio del numero delle classi
-            // Usiamo int.TryParse per assicurarci che l'utente abbia inserito dei numeri e non lettere
+            // 2. Lettura e salvataggio del numero delle classi
             bool isInfoValid = int.TryParse(TxtClassiInformatica.Text, out numeroClassiInformatica);
             bool isElettroValid = int.TryParse(TxtClassiElettronica.Text, out numeroClassiElettronica);
             bool isBiotecValid = int.TryParse(TxtClassiBiotecnologie.Text, out numeroClassiBiotecnologie);
@@ -70,19 +72,29 @@ namespace BlaisePascal.ProjectWork3E.Wpf
 
             try
             {
-                // 3. Elaborazione dei dati (ora sicura)
-                DatiImportatiDto.Alunni.Clear();
-                DatiImportatiDto.Scelte.Clear();
-                DatiImportatiDto.Scuole.Clear();
-                DatiImportatiDto.Genitori.Clear();
-                DatiImportatiDto.PreferenzeCompagni.Clear();
+                // MOSTRA CARICAMENTO e disabilita il pulsante
+                BtnImport.IsEnabled = false;
+                BtnImport.Content = "Importazione...";
+                ProgBar.Visibility = Visibility.Visible;
+                TxtStatus.Text = "Lettura del file Excel in corso...";
+                TxtStatus.Visibility = Visibility.Visible;
 
-                ImportazioneService.EstrapolaDati(importedFilePath);
+                // 3. Elaborazione dei dati spostata in background per non bloccare la grafica
+                await Task.Run(() =>
+                {
+                    DatiImportatiDto.Alunni.Clear();
+                    DatiImportatiDto.Scelte.Clear();
+                    DatiImportatiDto.Scuole.Clear();
+                    DatiImportatiDto.Genitori.Clear();
+                    DatiImportatiDto.PreferenzeCompagni.Clear();
 
-                DatiImportatiDto.NumeroClassiInformatica = numeroClassiInformatica;
-                DatiImportatiDto.NumeroClassiAutomazione = numeroClassiElettronica;
-                DatiImportatiDto.NumeroClassiBiotecnologie = numeroClassiBiotecnologie;
-                DatabaseInitializer.Initialize();
+                    ImportazioneService.EstrapolaDati(importedFilePath);
+
+                    DatiImportatiDto.NumeroClassiInformatica = numeroClassiInformatica;
+                    DatiImportatiDto.NumeroClassiAutomazione = numeroClassiElettronica;
+                    DatiImportatiDto.NumeroClassiBiotecnologie = numeroClassiBiotecnologie;
+                    DatabaseInitializer.Initialize();
+                });
 
                 // Messaggio di successo
                 MessageBox.Show($"Importazione completata!\n\nTrovati {DatiImportatiDto.Alunni.Count} studenti nel file Excel.\nFile: {importedFilePath}\nClassi Informatica: {numeroClassiInformatica}\nClassi Elettronica: {numeroClassiElettronica}\nClassi Biotecnologie: {numeroClassiBiotecnologie}",
@@ -91,7 +103,14 @@ namespace BlaisePascal.ProjectWork3E.Wpf
             catch (Exception ex)
             {
                 MessageBox.Show($"Si è verificato un errore durante l'importazione del file Excel:\n\n{ex.Message}", "Errore Lettura File", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
+            }
+            finally
+            {
+                // NASCONDE IL CARICAMENTO e ripristina il pulsante
+                BtnImport.IsEnabled = true;
+                BtnImport.Content = "Importa";
+                ProgBar.Visibility = Visibility.Collapsed;
+                TxtStatus.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -105,79 +124,89 @@ namespace BlaisePascal.ProjectWork3E.Wpf
 
             try
             {
+                // MOSTRA CARICAMENTO e disabilita il pulsante
                 BtnDownload.IsEnabled = false;
                 BtnDownload.Content = "Generazione in corso...";
+                ProgBar.Visibility = Visibility.Visible;
+                TxtStatus.Text = "Creazione classi e file in corso...";
+                TxtStatus.Visibility = Visibility.Visible;
 
                 var studenteRepo = new BlaisePascal.ProjectWork._3E.Infrastructure.Persistence.InMemoryStudenteRepository();
                 var classeRepo = new BlaisePascal.ProjectWork._3E.Infrastructure.Persistence.InMemoryClasseRepository();
 
-                foreach (var dto in DatiImportatiDto.Alunni)
+                // Il ciclo foreach pesante spostato su un task separato
+                await Task.Run(async () =>
                 {
-                    // Recupera scelta compagno e indirizzo preferito
-                    var preferenza = DatiImportatiDto.PreferenzeCompagni.FirstOrDefault(p => p.CodiceFiscaleStudente == dto.CodiceFiscale);
-                    var scelta = DatiImportatiDto.Scelte.FirstOrDefault(s => s.CodiceFiscaleStudente == dto.CodiceFiscale);
-                    var scuola = DatiImportatiDto.Scuole.FirstOrDefault(s => s.CodiceFiscaleStudente == dto.CodiceFiscale);
-
-                    var cittadinanza = string.IsNullOrWhiteSpace(dto.Cittadinanza) || dto.Cittadinanza.ToLower() == "italiana" || dto.Cittadinanza.ToLower() == "italia"
-                        ? BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.Cittadinanza.Italiana 
-                        : BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.Cittadinanza.Crea(100);
-
-                    var profiloBES = BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.ProfiloBES.Crea(dto.Disabilita, dto.Dsa, dto.DisabilitaAssistenzaBase);
-
-                    BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.SceltaCompagno? compagno = null;
-                    if (preferenza != null && !string.IsNullOrWhiteSpace(preferenza.NomeStudenteScelto))
+                    foreach (var dto in DatiImportatiDto.Alunni)
                     {
-                        compagno = BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.SceltaCompagno.Crea(preferenza.NomeStudenteScelto);
+                        var preferenza = DatiImportatiDto.PreferenzeCompagni.FirstOrDefault(p => p.CodiceFiscaleStudente == dto.CodiceFiscale);
+                        var scelta = DatiImportatiDto.Scelte.FirstOrDefault(s => s.CodiceFiscaleStudente == dto.CodiceFiscale);
+                        var scuola = DatiImportatiDto.Scuole.FirstOrDefault(s => s.CodiceFiscaleStudente == dto.CodiceFiscale);
+
+                        var cittadinanza = string.IsNullOrWhiteSpace(dto.Cittadinanza) || dto.Cittadinanza.ToLower() == "italiana" || dto.Cittadinanza.ToLower() == "italia"
+                            ? BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.Cittadinanza.Italiana
+                            : BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.Cittadinanza.Crea(100);
+
+                        var profiloBES = BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.ProfiloBES.Crea(dto.Disabilita, dto.Dsa, dto.DisabilitaAssistenzaBase);
+
+                        BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.SceltaCompagno? compagno = null;
+                        if (preferenza != null && !string.IsNullOrWhiteSpace(preferenza.NomeStudenteScelto))
+                        {
+                            compagno = BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.SceltaCompagno.Crea(preferenza.NomeStudenteScelto);
+                        }
+
+                        DateOnly dataNascita = DateOnly.TryParse(dto.DataDiNascita, out var dn) ? dn : new DateOnly(2010, 1, 1);
+                        DateOnly? dataArrivo = DateOnly.TryParse(dto.DataArrivoInItalia, out var da) ? da : null;
+
+                        var studente = BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.Studente.Crea(
+                            nome: string.IsNullOrWhiteSpace(dto.Nome) ? "Anonimo" : dto.Nome,
+                            cognome: string.IsNullOrWhiteSpace(dto.Cognome) ? "Anonimo" : dto.Cognome,
+                            sesso: dto.Sesso ? BlaisePascal.ProjectWork._3E.Domain.Enums.Sesso.Maschio : BlaisePascal.ProjectWork._3E.Domain.Enums.Sesso.Femmina,
+                            codiceFiscale: string.IsNullOrWhiteSpace(dto.CodiceFiscale) ? Guid.NewGuid().ToString().Substring(0, 16) : dto.CodiceFiscale,
+                            dataNascita: dataNascita,
+                            dataArrivoItalia: dataArrivo,
+                            cittadinanza: cittadinanza,
+                            codiceScuolaProvenienza: scuola?.CodiceScuola ?? "BOH",
+                            profiloBES: profiloBES,
+                            faReligione: dto.FaReligione,
+                            votoEsame: (dto.VotoEsameTerzaMedia > 0 && dto.VotoEsameTerzaMedia <= 10) ? dto.VotoEsameTerzaMedia : null,
+                            sceltaCompagno: compagno,
+                            indirizzoPreferito: scelta?.IndirizzoScelto
+                        );
+
+                        await studenteRepo.AddAsync(studente);
                     }
-
-                    DateOnly dataNascita = DateOnly.TryParse(dto.DataDiNascita, out var dn) ? dn : new DateOnly(2010, 1, 1);
-                    DateOnly? dataArrivo = DateOnly.TryParse(dto.DataArrivoInItalia, out var da) ? da : null;
-
-                    var studente = BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.Studente.Crea(
-                        nome: string.IsNullOrWhiteSpace(dto.Nome) ? "Anonimo" : dto.Nome,
-                        cognome: string.IsNullOrWhiteSpace(dto.Cognome) ? "Anonimo" : dto.Cognome,
-                        sesso: dto.Sesso ? BlaisePascal.ProjectWork._3E.Domain.Enums.Sesso.Maschio : BlaisePascal.ProjectWork._3E.Domain.Enums.Sesso.Femmina,
-                        codiceFiscale: string.IsNullOrWhiteSpace(dto.CodiceFiscale) ? Guid.NewGuid().ToString().Substring(0,16) : dto.CodiceFiscale,
-                        dataNascita: dataNascita,
-                        dataArrivoItalia: dataArrivo,
-                        cittadinanza: cittadinanza,
-                        codiceScuolaProvenienza: scuola?.CodiceScuola ?? "BOH",
-                        profiloBES: profiloBES,
-                        faReligione: dto.FaReligione,
-                        votoEsame: (dto.VotoEsameTerzaMedia > 0 && dto.VotoEsameTerzaMedia <= 10) ? dto.VotoEsameTerzaMedia : null,
-                        sceltaCompagno: compagno,
-                        indirizzoPreferito: scelta?.IndirizzoScelto
-                    );
-
-                    await studenteRepo.AddAsync(studente);
-                }
+                });
 
                 var opzioni = new OpzioniDistribuzione
                 {
-                    ConsentiSforo = true, // Consente sempre sforo se richiesto dai vincoli
+                    ConsentiSforo = true,
                     UsaPreferenze = true,
                 };
-                
+
                 opzioni.SezioniPerIndirizzo["Informatica"] = numeroClassiInformatica;
                 opzioni.SezioniPerIndirizzo["Automazione"] = numeroClassiElettronica;
                 opzioni.SezioniPerIndirizzo["Bio"] = numeroClassiBiotecnologie;
 
                 var service = new DistribuzioneClassiService(studenteRepo, classeRepo);
                 var esportazione = new BlaisePascal.ProjectWork._3E.Application.ExportModels.EsportazioneDatiExcel(service);
-                
+
                 // Distribuisce ed esporta
-                await esportazione.EsportaAsync(opzioni); 
+                await esportazione.EsportaAsync(opzioni);
 
                 MessageBox.Show("Risultati distribuiti ed esportati con successo nel Desktop!", "Completato", MessageBoxButton.OK, MessageBoxImage.Information);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show($"Errore durante la distribuzione o esportazione: {ex.Message}", "Errore", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
+                // NASCONDE IL CARICAMENTO e ripristina il pulsante
                 BtnDownload.IsEnabled = true;
                 BtnDownload.Content = "Scarica Risultati";
+                ProgBar.Visibility = Visibility.Collapsed;
+                TxtStatus.Visibility = Visibility.Collapsed;
             }
         }
     }

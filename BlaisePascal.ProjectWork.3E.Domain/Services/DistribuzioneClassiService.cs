@@ -89,6 +89,46 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                 .ToList();
         }
 
+        // Variante che restituisce anche i metadati della classe (sezione + indirizzo)
+        public async Task<List<(Aggregates.ClassePrima.ClassePrima Classe, List<Studente> Studenti)>> DistribuisciConMetadatiAsync(OpzioniDistribuzione? opzioni = null)
+        {
+            opzioni ??= OpzioniDistribuzione.Default;
+
+            var studenti = await _studenteRepository.GetNonAssegnatiAsync();
+            var classi   = await _classeRepository.GetAllAsync();
+
+            if (classi.Count == 0)
+                classi = await GeneraClassiAsync(opzioni);
+
+            if (studenti.Count == 0)
+                return new List<(Aggregates.ClassePrima.ClassePrima, List<Studente>)>();
+
+            var coppiePreferenze = new List<(int IdxI, int IdxJ)>();
+            if (opzioni.UsaPreferenze)
+            {
+                _matchIncerti.Clear();
+                var risultatiMatch = _preferenzaMatcher.Analizza(studenti);
+                _matchIncerti.AddRange(risultatiMatch.Where(r => r.Categoria == CategoriaMatch.Incerto));
+                coppiePreferenze = risultatiMatch
+                    .Where(r => r.Categoria == CategoriaMatch.Certo && r.CandidatoTrovato != null)
+                    .Select(r => (IdxI: studenti.IndexOf(r.Richiedente), IdxJ: studenti.IndexOf(r.CandidatoTrovato!)))
+                    .Where(p => p.IdxI >= 0 && p.IdxJ >= 0)
+                    .ToList();
+            }
+
+            var assegnazioni = RisolviConOrTools(studenti, classi, opzioni, coppiePreferenze);
+            ApplicaSoluzione(assegnazioni, studenti, classi, opzioni);
+
+            await _studenteRepository.SaveChangesAsync();
+            await _classeRepository.SaveChangesAsync();
+
+            var tutti = await _studenteRepository.GetAllAsync();
+            return classi
+                .OrderBy(c => c.Sezione.Valore)
+                .Select(c => (c, tutti.Where(s => s.ClasseId == c.Id).ToList()))
+                .ToList();
+        }
+
         //  Generazione classi (logica invariata rispetto all'originale)
         
 
@@ -315,6 +355,23 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                 var notTogether = model.NewBoolVar($"nt_{pi}_{pj}");
                 model.AddBoolXor(new ILiteral[] { inSameClass, notTogether });
                 AddPenalty((IntVar)notTogether, 50);
+            }
+
+
+            // GESTIONE INDIRIZZO PREFERITO:
+            // Per ogni studente che ha un IndirizzoPreferito espresso, 
+            // penalizziamo fortemente (+1000) l'assegnazione a una classe con indirizzo diverso.
+            for (int i = 0; i < n; i++)
+            {
+                if (studenti[i].IndirizzoPreferito == null) continue;
+
+                for (int j = 0; j < m; j++)
+                {
+                    if (!string.Equals(classi[j].Indirizzo.Nome, studenti[i].IndirizzoPreferito, StringComparison.OrdinalIgnoreCase))
+                    {
+                        AddPenalty((IntVar)x[i, j], 1000);
+                    }
+                }
             }
 
 

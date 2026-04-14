@@ -27,6 +27,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente
         // Criteri clustering
         public bool FaReligione { get; private set; }
         public int? VotoEsame { get; private set; }
+        public string? IndirizzoPreferito { get; private set; }
 
         // Stato assegnazione
         public StatoAssegnazione Stato { get; private set; }
@@ -41,7 +42,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente
 
         private Studente(Guid id, string nome, string cognome, Sesso sesso, string codiceFiscale, DateOnly dataNascita,
             DateOnly? dataArrivoItalia, Cittadinanza cittadinanza, string codiceScuolaProvenienza,
-            ProfiloBES profiloBES, bool faReligione, int? votoEsame, SceltaCompagno? sceltaCompagno)
+            ProfiloBES profiloBES, bool faReligione, int? votoEsame, SceltaCompagno? sceltaCompagno, string? indirizzoPreferito = null)
         {
             Id = id;
             Nome = nome;
@@ -56,13 +57,14 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente
             FaReligione = faReligione;
             VotoEsame = votoEsame;
             SceltaCompagno = sceltaCompagno;
+            IndirizzoPreferito = indirizzoPreferito;
             Stato = StatoAssegnazione.NonAssegnato;
             ClasseId = null;
         }
 
         public static Studente Crea(string nome, string cognome, Sesso sesso, string codiceFiscale, DateOnly dataNascita,
             DateOnly? dataArrivoItalia, Cittadinanza cittadinanza, string codiceScuolaProvenienza,
-            ProfiloBES profiloBES, bool faReligione, int? votoEsame, SceltaCompagno? sceltaCompagno = null)
+            ProfiloBES profiloBES, bool faReligione, int? votoEsame, SceltaCompagno? sceltaCompagno = null, string? indirizzoPreferito = null)
         {
             if (string.IsNullOrWhiteSpace(nome))
                 throw new DomainException("Il nome è obbligatorio.");
@@ -72,7 +74,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente
                 throw new DomainException("Il codice fiscale è obbligatorio.");
 
             return new Studente(Guid.NewGuid(), nome, cognome, sesso, codiceFiscale, dataNascita, dataArrivoItalia,
-                cittadinanza, codiceScuolaProvenienza, profiloBES, faReligione, votoEsame, sceltaCompagno);
+                cittadinanza, codiceScuolaProvenienza, profiloBES, faReligione, votoEsame, sceltaCompagno, indirizzoPreferito);
         }
 
        

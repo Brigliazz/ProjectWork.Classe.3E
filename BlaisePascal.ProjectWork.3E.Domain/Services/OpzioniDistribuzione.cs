@@ -12,6 +12,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         // bypassando i check vincolanti e simulando aule più ampie nel calcolo della loro capienza residua.
 
         public bool ConsentiSforo { get; set; } = false;
+        public int LimiteMassimoSforo { get; set; } = 30;
 
         public bool UsaPreferenze { get; set; } = true;
 

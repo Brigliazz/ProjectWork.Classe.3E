@@ -105,7 +105,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima
                 // In modalità sforo diamo un margine fittizio equo a tutte le classi,
                 // così che chi ha meno alunni risulti sempre avere 'più posti liberi'
                 // e la distribuzione continui a spalmare uniformemente l'eccedenza.
-                limite += 50;
+                limite = Math.Min(limite + 50, opzioni.LimiteMassimoSforo);
             }
 
             return limite - NumeroStudenti;

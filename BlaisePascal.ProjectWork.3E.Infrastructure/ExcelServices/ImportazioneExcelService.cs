@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -26,7 +26,7 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices
             per il percorso file bisogna fare in modo che dalla WPF (sfoglia file) venga messo il percorso nella varibaile percorsoFIle
             */
 
-            using (var stream = File.Open(percorsoFile, FileMode.Open, FileAccess.Read))
+            using (var stream = File.Open(percorsoFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
                 IExcelDataReader reader;
 
@@ -105,8 +105,8 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices
                             Disabilita = EstraiDato(row, idxDisabilita).ToLower().Contains("si"),
                             Dsa = EstraiDato(row, idxDsa).ToLower().Contains("si"),
                             Indirizzo = EstraiDato(row, idxIndirizzo),
-                            // Se EstraiDato restituisce un object o string
-                            VotoEsameTerzaMedia = Convert.ToInt32(EstraiDato(row, idxVotoMedia)),
+                            // Usa TryParse per prevenire crash se il voto è vuoto o non numerico
+                            VotoEsameTerzaMedia = int.TryParse(EstraiDato(row, idxVotoMedia), out int voto) ? voto : 0,
                             FaReligione = EstraiDato(row, idxReligione).ToLower() == "si" || EstraiDato(row, idxReligione).ToLower() == "sì",
                             DisabilitaAssistenzaBase = EstraiDato(row, idxAssBase).ToLower() == "si" || EstraiDato(row, idxAssBase).ToLower() == "sì",
                             DataDiNascita = EstraiDato(row, idxDataNascita),
@@ -114,7 +114,7 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices
                         });
 
                         DatiImportatiDto.Scelte.Add(new SceltaImportDto { 
-                            IndirizzoScelto = EstraiDato(row, idxIndirizzoScelto),
+                            IndirizzoScelto = NormalizzaIndirizzoScelto(EstraiDato(row, idxIndirizzoScelto)),
                             CodiceFiscaleStudente = EstraiDato(row, idxCf),
                         });
                         DatiImportatiDto.Scuole.Add(new ScuolaProvImportDto { CodiceScuola = EstraiDato(row, idxCodScuola), DenominazioneScuola = EstraiDato(row, idxNomeScuola), ComuneScuola = EstraiDato(row, idxComuneScuola), CodiceFiscaleStudente = EstraiDato(row, idxCf), });
@@ -153,6 +153,25 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices
                 return riga[indice]?.ToString().Trim() ?? "";
             }
             return "";
+        }
+
+        private static string? NormalizzaIndirizzoScelto(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input) || input.Trim() == "-") 
+                return null;
+
+            string upper = input.ToUpperInvariant();
+
+            if (upper.Contains("INFORMATICA"))
+                return "Informatica";
+            
+            if (upper.Contains("ELETTRONICA") || upper.Contains("ELETTROTECNICA") || upper.Contains("AUTOMAZIONE"))
+                return "Automazione";
+            
+            if (upper.Contains("CHIMICA") || upper.Contains("BIOTECNOLOGIE") || upper.Contains("BIO"))
+                return "Bio";
+
+            return null;
         }
     }
 }

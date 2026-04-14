@@ -111,7 +111,7 @@ string[] scuoleProvenienza = { "MIIS00100A", "MIIS00200B", "MIIS00300C", "MIIS00
 
 Studente CreaStudente(string nome, string cognome, Sesso sesso,
     bool hasDisabilita = false, bool hasDSA = false, bool isStraniero = false,
-    int? votoEsame = null, string? codiceScuola = null, SceltaCompagno? sceltaCompagno = null)
+    int? votoEsame = null, string? codiceScuola = null, SceltaCompagno? sceltaCompagno = null, string? indirizzoPreferito = null)
 {
     cfCounter++;
     var cittadinanza = isStraniero ? Cittadinanza.Crea(100) : Cittadinanza.Italiana;
@@ -126,7 +126,8 @@ Studente CreaStudente(string nome, string cognome, Sesso sesso,
         profiloBES,
         faReligione: true,
         votoEsame: votoEsame,
-        sceltaCompagno: sceltaCompagno);
+        sceltaCompagno: sceltaCompagno,
+        indirizzoPreferito: indirizzoPreferito);
 }
 
 // Generazione automatica con percentuali realistiche
@@ -156,6 +157,8 @@ if (opzioni.UsaPreferenze && totaleStudenti >= 10)
 }
 
 var studenti = new List<Studente>();
+string[] indirizziDisponibili = { "Informatica", "Automazione", "Bio" };
+
 for (int i = 0; i < totaleStudenti; i++)
 {
     bool isFemmina = i < numFemmine;
@@ -164,6 +167,9 @@ for (int i = 0; i < totaleStudenti; i++)
     bool isStraniero = (i % 20 == 2);
 
     preferenzePerIndice.TryGetValue(i, out var sceltaCompagno);
+
+    // Assegnamo un indirizzo preferito al 70% degli studenti
+    string? indirizzoPreferito = (i % 10 < 7) ? indirizziDisponibili[i % 3] : null;
 
     studenti.Add(CreaStudente(
         $"Nome{i + 1}",
@@ -174,7 +180,8 @@ for (int i = 0; i < totaleStudenti; i++)
         isStraniero: isStraniero,
         votoEsame: (i % 5) + 6,
         codiceScuola: scuoleProvenienza[i % scuoleProvenienza.Length],
-        sceltaCompagno: sceltaCompagno));
+        sceltaCompagno: sceltaCompagno,
+        indirizzoPreferito: indirizzoPreferito));
 }
 
 foreach (var s in studenti)

@@ -161,6 +161,11 @@
                     </StackPanel>
                     <Button x:Name="BtnDownload" Content="Scarica Risultati" MinHeight="42" 
                             Style="{StaticResource SecondaryButton}" Click="BtnDownload_Click_1"/>
+
+                    <ProgressBar x:Name="ProgBarGenerazione" IsIndeterminate="True" Height="8" Margin="0,16,0,0"
+                                 Foreground="#22c55e" Background="#e2e8f0" BorderThickness="0" Visibility="Collapsed"/>
+                    <TextBlock x:Name="TxtStatusGenerazione" Text="Generazione classi in corso..." FontSize="12" Foreground="#64748b"
+                               HorizontalAlignment="Center" Margin="0,8,0,0" Visibility="Collapsed"/>
                 </StackPanel>
 
             </StackPanel>

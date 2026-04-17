@@ -1,35 +1,47 @@
-/*
+using BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima;
+using BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 
-// 1. Configurazione licenza
-QuestPDF.Settings.License = LicenseType.Community;
-namespace Blaise.Pascal.ProjectWork._3E.EsportazioneDati
+namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
 {
     public class EsportazioneDatiPDF
     {
-        public void CreaPDF()
+        /// <summary>
+        /// Genera un PDF a partire dai risultati già distribuiti.
+        /// Riceve direttamente la lista di (Classe, Studenti) già pronta.
+        /// </summary>
+        public void Esporta(List<(ClassePrima Classe, List<Studente> Studenti)> risultati)
         {
-            // Implementazione della logica per creare un PDF
-            var path = "Registro_Classi_Prime_Aggiornato.pdf";
+            // Licenza community QuestPDF
+            QuestPDF.Settings.License = LicenseType.Community;
 
-            // 3. Generazione documento
+            if (risultati.Count == 0)
+                return;
+
+            // Salvataggio sul desktop
+            string desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            string percorso = Path.Combine(desktop, "Classibase.pdf");
+
             Document.Create(container =>
             {
-                // Raggruppamento per classe e ordinamento alfabetico (Classe -> Cognome -> Nome)
-                var classiRaggruppate = listaStudenti
-                    .GroupBy(s => s.Classe)
-                    .OrderBy(g => g.Key);
-
-                foreach (var gruppo in classiRaggruppate)
+                foreach (var (classe, studenti) in risultati)
                 {
-                    var nomeClasse = gruppo.Key;
-                    var studentiOrdinati = gruppo
+                    if (studenti.Count == 0) continue;
+
+                    string sezione = classe.Sezione.Valore;
+                    string indirizzo = classe.Indirizzo.Nome;
+
+                    // Ordinamento alfabetico
+                    var studentiOrdinati = studenti
                         .OrderBy(s => s.Cognome)
-                        .ThenBy(s => s.Nome) // Questo gestisce i due "Verdi" in 1M
+                        .ThenBy(s => s.Nome)
                         .ToList();
 
                     container.Page(page =>
@@ -42,11 +54,16 @@ namespace Blaise.Pascal.ProjectWork._3E.EsportazioneDati
                         {
                             col.Item().Row(row =>
                             {
-                                row.RelativeItem().Column(c => {
-                                    c.Item().Text("Anno Scolastico 2026/2027").FontSize(9).FontColor(Colors.Grey.Medium);
+                                row.RelativeItem().Column(c =>
+                                {
+                                    c.Item().Text("Anno Scolastico 2025/2026").FontSize(9).FontColor(Colors.Grey.Medium);
                                 });
-                                row.RelativeItem().AlignRight().Text($"CLASSE {nomeClasse}").FontSize(22).ExtraBold().FontColor(Colors.Blue.Medium);
+                                row.RelativeItem().AlignRight().Text($"CLASSE 1{sezione}").FontSize(22).ExtraBold().FontColor(Colors.Blue.Medium);
                             });
+
+                            // Indirizzo sotto il titolo
+                            col.Item().AlignRight().Text($"Indirizzo: {indirizzo}").FontSize(12).FontColor(Colors.Grey.Darken1);
+
                             col.Item().PaddingVertical(5).LineHorizontal(1).LineColor(Colors.Black);
                         });
 
@@ -55,10 +72,10 @@ namespace Blaise.Pascal.ProjectWork._3E.EsportazioneDati
                         {
                             table.ColumnsDefinition(columns =>
                             {
-                                columns.ConstantColumn(30);
-                                columns.RelativeColumn(3);
-                                columns.RelativeColumn(3);
-                                columns.RelativeColumn(2);
+                                columns.ConstantColumn(30);   // N°
+                                columns.RelativeColumn(3);    // Cognome
+                                columns.RelativeColumn(3);    // Nome
+                                columns.RelativeColumn(2);    // Firma
                             });
 
                             table.Header(header =>
@@ -89,12 +106,14 @@ namespace Blaise.Pascal.ProjectWork._3E.EsportazioneDati
                         // Footer
                         page.Footer().Row(row =>
                         {
-                            row.RelativeItem().Text(t => {
+                            row.RelativeItem().Text(t =>
+                            {
                                 t.Span("Stampato il: ").FontSize(9);
-                                t.Span(System.DateTime.Now.ToString("dd/MM/yyyy")).FontSize(9);
+                                t.Span(DateTime.Now.ToString("dd/MM/yyyy")).FontSize(9);
                             });
 
-                            row.RelativeItem().AlignRight().Text(x => {
+                            row.RelativeItem().AlignRight().Text(x =>
+                            {
                                 x.Span("Pagina ");
                                 x.CurrentPageNumber();
                                 x.Span(" di ");
@@ -104,11 +123,18 @@ namespace Blaise.Pascal.ProjectWork._3E.EsportazioneDati
                     });
                 }
             })
-            .GeneratePdf(path);
+            .GeneratePdf(percorso);
 
-            // 4. Apertura automatica
-            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = path, UseShellExecute = true }); } catch { }
+            // Apertura automatica del PDF
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = percorso,
+                    UseShellExecute = true
+                });
+            }
+            catch { }
         }
     }
 }
-*/

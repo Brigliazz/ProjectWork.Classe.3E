@@ -21,11 +21,18 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
 
         public async Task EsportaAsync(OpzioniDistribuzione opzioni)
         {
-            // Licenza gratuita EPPlus
-            ExcelPackage.License.SetNonCommercialOrganization("<Your Noncommercial Organization>");
-
             // Recupero matrice di studenti per classe con metadati (sezione + indirizzo)
             var risultati = await _distribuzioneService.DistribuisciConMetadatiAsync(opzioni);
+            Esporta(risultati);
+        }
+
+        /// <summary>
+        /// Esporta da risultati già distribuiti (senza richiamare la distribuzione).
+        /// </summary>
+        public void Esporta(List<(BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima.ClassePrima Classe, List<BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.Studente> Studenti)> risultati)
+        {
+            // Licenza gratuita EPPlus
+            ExcelPackage.License.SetNonCommercialOrganization("<Your Noncommercial Organization>");
 
             if (risultati.Count == 0)
             {

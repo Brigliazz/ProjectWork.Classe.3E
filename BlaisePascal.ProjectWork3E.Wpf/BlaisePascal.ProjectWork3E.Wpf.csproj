@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -12,7 +12,6 @@
     <ProjectReference Include="..\BlaisePascal.ProjectWork.3E.Application\BlaisePascal.ProjectWork.3E.Application.csproj" />
     <ProjectReference Include="..\BlaisePascal.ProjectWork.3E.Domain\BlaisePascal.ProjectWork.3E.Domain.csproj" />
     <ProjectReference Include="..\BlaisePascal.ProjectWork.3E.Infrastructure\BlaisePascal.ProjectWork.3E.Infrastructure.csproj" />
-    <ProjectReference Include="..\BlaisePascal.ProjectWork.3E.UnitTest\BlaisePascal.ProjectWork.3E.UnitTest.csproj" />
   </ItemGroup>
 
 </Project>

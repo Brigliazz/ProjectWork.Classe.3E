@@ -44,11 +44,8 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                 string testoOriginale = sc.Testo;
                 if (string.IsNullOrWhiteSpace(testoOriginale)) continue;
 
-                // Step 1 — Fix encoding (UTF-8 salvato come Latin-1)
-                string testoFixato = FixEncoding(testoOriginale);
-
-                // Step 2 — Normalizza e splitta in segmenti
-                var segmenti = NormalizzaESplita(testoFixato);
+                // Step 1 — Normalizza e splitta in segmenti
+                var segmenti = NormalizzaESplita(testoOriginale);
 
                 foreach (var segmento in segmenti)
                 {
@@ -90,83 +87,159 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             return risultati;
         }
 
-        //  Step 1 — Fix encoding 
-        // Tenta di reinterpretare il testo come UTF-8 mal decodificato come Latin-1.
-        // Esempio: "NiccolÃ²" → "Niccolò"
 
-        private static string FixEncoding(string testo)
-        {
-            try
-            {
-                var latin1 = System.Text.Encoding.GetEncoding("iso-8859-1");
-                var bytes  = latin1.GetBytes(testo);
-                return System.Text.Encoding.UTF8.GetString(bytes);
-            }
-            catch
-            {
-                return testo; // Se fallisce, usa il testo originale
-            }
-        }
-
-
-        //  Step 2 — Normalizza e splitta 
-        // Restituisce uno o più segmenti puliti pronti per il matching.
-
+        /// <summary>
+        /// Normalizza il testo grezzo di preferenza ed estrae i singoli segmenti-nome.
+        /// Pipeline di pulizia applicata in ordine:
+        ///   2a. Troncamento a parole sentinella (nato il, se possibile, @, ecc.)
+        ///   2b. Rimozione contenuto tra parentesi (), [], {}, &lt;&gt;
+        ///   2c. Rimozione estesa di parole/frasi rumore (50+ voci, case-insensitive)
+        ///   2d. Rimozione date (dd/mm/yyyy, dd-mm-yyyy, dd.mm.yyyy, dd/mm/yy, anni isolati)
+        ///   2e. Rimozione numeri di telefono (7+ cifre consecutive)
+        ///   2f. Rimozione prefissi ordinali (1), 2., a), ecc.)
+        ///   2g. Rimozione punteggiatura residua (preserva trattino tra lettere)
+        ///   2h. Normalizzazione apostrofi (varianti → ')
+        ///   2i. Normalizzazione spazi bianchi
+        /// Dopo la pulizia, lo split avviene su: \n, " e ", " - ", " / ", virgola, punto e virgola, spazi multipli.
+        /// Post-filtro: scarta segmenti &lt;3 car., puramente numerici, parola singola ≤3 car., deduplicazione.
+        /// </summary>
         private static List<string> NormalizzaESplita(string testo)
         {
-            // Rimozione di rumore contestuale prima dello split
             string pulito = testo;
 
-            // Date (es. "13/04/2010", "26/11/2010")
-            pulito = Regex.Replace(pulito, @"\b\d{2}/\d{2}/\d{4}\b", " ");
-
-            // Numeri di telefono (es. "3883969178")
-            pulito = Regex.Replace(pulito, @"\b\d{7,}\b", " ");
-
-            // Parole rumore — note descrittive aggiunte dai genitori
-            var paroleRumore = new[]
+            // ── 2a. Troncamento a parole sentinella ──────────────────────────
+            string[] sentinelle =
             {
-                "attuale compagno di classe", "attuale compagna di classe",
-                "scuola di provenienza", "media frequentata",
-                "amico", "amica", "cugino", "cugina", "fratello", "sorella",
-                "perché", "perche", "nato a", "nata a", "residente",
-                "via", "cell", "e-mail", "email"
+                "nato il", "nata il", "nato a", "nata a",
+                "se possibile", "tutrice", "tutore",
+                "sono unica", "sono il", "sono la",
+                "genitore di", "madre di", "padre di",
+                "residente a", "residente in",
+                "scuola media", "scuola di provenienza",
+                "classe", "sezione",
+                "tel", "cell", "email", "e-mail", "@",
+                "nota:", "note:", "ps:", "p.s."
             };
-            foreach (var parola in paroleRumore)
-                pulito = Regex.Replace(pulito, Regex.Escape(parola), " ",
-                    RegexOptions.IgnoreCase);
-
-            // Parentesi e contenuto tra parentesi (es. "(cugino)")
-            pulito = Regex.Replace(pulito, @"\(.*?\)", " ");
-
-            // Numerazione tipo "1)" "2)" "3)"
-            pulito = Regex.Replace(pulito, @"\b\d+\)", " ");
-
-            // Punteggiatura residua
-            pulito = Regex.Replace(pulito, @"[.,;:!?]", " ");
-
-            // Normalizza spazi multipli
-            pulito = Regex.Replace(pulito, @"\s{2,}", " ").Trim();
-
-            //  Split su separatori di preferenze multiple 
-            // Ordine importante: prima i separatori più specifici
-            var separatori = new[] { " e ", "  ", "\n" };
-            var segmenti   = new List<string> { pulito };
-
-            foreach (var sep in separatori)
+            foreach (var s in sentinelle)
             {
-                var nuovi = new List<string>();
-                foreach (var s in segmenti)
-                    nuovi.AddRange(s.Split(new[] { sep },
-                        StringSplitOptions.RemoveEmptyEntries));
-                segmenti = nuovi;
+                int idx = pulito.IndexOf(s, StringComparison.OrdinalIgnoreCase);
+                if (idx >= 0)
+                {
+                    pulito = pulito[..idx];
+                }
             }
 
-            // Filtra segmenti troppo corti per essere un nome (< 3 caratteri)
-            return segmenti
+            // ── 2b. Rimozione contenuto tra parentesi ────────────────────────
+            pulito = Regex.Replace(pulito, @"\(.*?\)", " ");
+            pulito = Regex.Replace(pulito, @"\[.*?\]", " ");
+            pulito = Regex.Replace(pulito, @"\{.*?\}", " ");
+            pulito = Regex.Replace(pulito, @"<.*?>",   " ");
+
+            // ── 2c. Rimozione parole/frasi rumore (più lunghe prima) ─────────
+            string[] paroleRumore =
+            {
+                // Frasi lunghe prima
+                "attuale compagno di classe", "attuale compagna di classe",
+                "compagno di classe", "compagna di classe",
+                "scuola di provenienza", "media frequentata", "scuola media",
+                "mio figlio vorrebbe stare con", "vorrebbe stare con",
+                "si richiede di stare con", "si chiede di stare con",
+                "preferisce stare con", "chiede di stare con",
+                "amico del cuore", "migliore amico", "migliore amica",
+                // Parole singole / frasi brevi
+                "amico", "amica", "amici", "amiche",
+                "cugino", "cugina", "fratello", "sorella", "fratellino", "sorellina",
+                "compagno", "compagna",
+                "perché", "perche", "perchè",
+                "nato a", "nata a", "nato il", "nata il",
+                "residente", "via", "viale", "piazza", "corso",
+                "cell", "cellulare", "telefono", "tel",
+                "e-mail", "email", "mail",
+                "madre", "padre", "mamma", "papà", "papa", "genitore",
+                "tutrice", "tutore", "legale",
+                "del", "della", "dello", "dei", "delle",
+                "con", "insieme a", "insieme con",
+                "si chiama", "di nome",
+                "nr", "n°", "numero"
+            };
+            foreach (var parola in paroleRumore)
+            {
+                // Whole-word / whole-phrase match (word-boundary)
+                string pattern = @"(?<!\w)" + Regex.Escape(parola) + @"(?!\w)";
+                pulito = Regex.Replace(pulito, pattern, " ", RegexOptions.IgnoreCase);
+            }
+
+            // ── 2d. Rimozione date ──────────────────────────────────────────
+            // dd/mm/yyyy, dd-mm-yyyy, dd.mm.yyyy
+            pulito = Regex.Replace(pulito, @"\b\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{4}\b", " ");
+            // dd/mm/yy
+            pulito = Regex.Replace(pulito, @"\b\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2}\b", " ");
+            // Anno isolato (4 cifre tra 1900 e 2099)
+            pulito = Regex.Replace(pulito, @"\b(19|20)\d{2}\b", " ");
+
+            // ── 2e. Rimozione numeri di telefono (7+ cifre) ──────────────────
+            pulito = Regex.Replace(pulito, @"\b\d{7,}\b", " ");
+
+            // ── 2f. Rimozione prefissi ordinali ──────────────────────────────
+            // Patterns: "1)", "2.", "a)", "b)" all'inizio di un segmento
+            pulito = Regex.Replace(pulito, @"(?:^|\n)\s*(?:\d+|[a-zA-Z])[.)]\s*", " ");
+
+            // ══ Split su separatori di preferenze multiple ═══════════════════
+            // Ordine: dal più specifico al meno specifico
+            string[][] separatoriGruppi =
+            {
+                new[] { "\n", "\r\n" },
+                new[] { " e " },
+                new[] { " - " },
+                new[] { " / " },
+                new[] { "," },
+                new[] { ";" }
+            };
+
+            var segmentiPreliminari = new List<string> { pulito };
+
+            foreach (var gruppo in separatoriGruppi)
+            {
+                var nuovi = new List<string>();
+                foreach (var seg in segmentiPreliminari)
+                    nuovi.AddRange(seg.Split(gruppo, StringSplitOptions.RemoveEmptyEntries));
+                segmentiPreliminari = nuovi;
+            }
+
+            var finali = new List<string>();
+
+            foreach (var elaborando in segmentiPreliminari)
+            {
+                string seg = elaborando;
+
+                // ── 2g. Rimozione punteggiatura residua ──────────────────────────
+                // Rimuovi tutto tranne lettere, cifre, spazi, trattino e apostrofo
+                seg = Regex.Replace(seg, @"[.,;:!?/\\|_#^~`]", " ");
+
+                // ── 2h. Normalizzazione apostrofi ────────────────────────────────
+                // Normalizza varianti → apostrofo standard
+                seg = Regex.Replace(seg, @"[\u2018\u2019\u0060\u00B4]", "'");
+                // Rimuovi apostrofo NON tra due lettere
+                seg = Regex.Replace(seg, @"(?<![a-zA-ZÀ-ÿ])'|'(?![a-zA-ZÀ-ÿ])", " ");
+
+                // ── 2i. Normalizzazione spazi bianchi ────────────────────────────
+                seg = Regex.Replace(seg, @"[\t\r\n]+", " ");
+                seg = Regex.Replace(seg, @"\s{2,}", " ").Trim();
+
+                if (seg.Length == 0) continue;
+
+                // Split su 2+ spazi consecutivi (nomi separati solo da spazi extra)
+                var parti = Regex.Split(seg, @"\s{2,}");
+                finali.AddRange(parti);
+            }
+
+            // ══ Post-filtro ═════════════════════════════════════════════════
+            return finali
                 .Select(s => s.Trim())
-                .Where(s => s.Length >= 3)
-                .Distinct()
+                .Where(s => s.Length >= 3)                               // < 3 char
+                .Where(s => !Regex.IsMatch(s, @"^\d+$"))                 // solo cifre
+                .Where(s => s.Contains(' ') || s.Length > 3)             // parola singola ≤ 3 char
+                .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
 
@@ -176,7 +249,18 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
         private static readonly HashSet<string> ValoriDaScartare =
             new(StringComparer.OrdinalIgnoreCase)
             {
-                "nessuno", "non", "-", "nessuno in particolare"
+                // Risposte negative
+                "nessuno", "nessuna", "non", "niente", "-", "/", ".",
+                "nessuno in particolare", "nessuna preferenza",
+                "non ho preferenze", "non saprei", "indifferente",
+                "non so", "boh", "n/a", "na", "nd", "//",
+                // Parole rumore sopravvissute alla pulizia
+                "madre", "padre", "mamma", "papa", "papà",
+                "genitore", "tutrice", "tutore",
+                "amico", "amica", "compagno", "compagna",
+                "fratello", "sorella", "cugino", "cugina",
+                // Punteggiatura residua e risposte minime
+                "x", "ok", "si", "no"
             };
 
         private static bool IsNonPreferenza(string segmento)
@@ -216,7 +300,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                 if (candidato.Id == richiedente.Id) continue;
 
                 string nomeCompleto = $"{candidato.Nome} {candidato.Cognome}";
-                int    score        = Fuzz.TokenSortRatio(segmento, nomeCompleto);
+                int    score        = Fuzz.TokenSortRatio(segmento.ToLowerInvariant(), nomeCompleto.ToLowerInvariant());
 
                 if (score > maxScore)
                 {

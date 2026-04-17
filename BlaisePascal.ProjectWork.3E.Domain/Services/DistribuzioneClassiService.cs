@@ -354,7 +354,7 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
 
                 var notTogether = model.NewBoolVar($"nt_{pi}_{pj}");
                 model.AddBoolXor(new ILiteral[] { inSameClass, notTogether });
-                AddPenalty((IntVar)notTogether, 50);
+                AddPenalty((IntVar)notTogether, 200);
             }
 
 

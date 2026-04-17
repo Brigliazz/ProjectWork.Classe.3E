@@ -92,6 +92,7 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices
                         if (string.IsNullOrWhiteSpace(nome) && string.IsNullOrWhiteSpace(cognome)) continue;
 
                         bool sesso = EstraiDato(row, idxSesso) == "M";
+                        bool disabilita = ParseBool(EstraiDato(row, idxDisabilita));
 
                         // Riempimento delle 5 liste presenti dentro l'oggetto 'risultato'
                         DatiImportatiDto.Alunni.Add(new StudenteImportDto
@@ -102,13 +103,14 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices
                             CodiceFiscale = EstraiDato(row, idxCf),
                             Cittadinanza = EstraiDato(row, idxCittadinanza),
                             ComuneResidenza = EstraiDato(row, idxResidenza),
-                            Disabilita = EstraiDato(row, idxDisabilita).ToLower().Contains("si"),
-                            Dsa = EstraiDato(row, idxDsa).ToLower().Contains("si"),
+                            Disabilita = disabilita,
+                            Dsa = ParseBool(EstraiDato(row, idxDsa)),
                             Indirizzo = EstraiDato(row, idxIndirizzo),
                             // Usa TryParse per prevenire crash se il voto è vuoto o non numerico
                             VotoEsameTerzaMedia = int.TryParse(EstraiDato(row, idxVotoMedia), out int voto) ? voto : 0,
-                            FaReligione = EstraiDato(row, idxReligione).ToLower() == "si" || EstraiDato(row, idxReligione).ToLower() == "sì",
-                            DisabilitaAssistenzaBase = EstraiDato(row, idxAssBase).ToLower() == "si" || EstraiDato(row, idxAssBase).ToLower() == "sì",
+                            FaReligione = ParseBool(EstraiDato(row, idxReligione)),
+                            // Invariante di dominio: se lo studente è disabile, DisabilitaAssBase è sempre true
+                            DisabilitaAssistenzaBase = disabilita || ParseBool(EstraiDato(row, idxAssBase)),
                             DataDiNascita = EstraiDato(row, idxDataNascita),
                             DataArrivoInItalia = EstraiDato(row, idxDataArrivo),
                             PreferenzaCompagno = idxPrefNomeCompagno >= 0 ? EstraiDato(row, idxPrefNomeCompagno) : null
@@ -156,6 +158,18 @@ namespace BlaisePascal.ProjectWork._3E.Infrastructure.ExcelServices
                 }
             }
             return -1;
+        }
+
+        private static bool ParseBool(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return false;
+            // Normalise: strip accents, lowercase, trim
+            string v = value.Trim().ToLowerInvariant()
+                .Replace("\u00ec", "i")  // ì → i
+                .Replace("\u00ed", "i")  // í → i
+                .Replace("\u00ee", "i")  // î → i
+                .Replace("\u00ef", "i"); // ï → i
+            return v == "si" || v == "s" || v == "1" || v == "true" || v == "x" || v == "yes" || v == "y";
         }
 
         private static string EstraiDato(DataRow riga, int indice)

@@ -50,13 +50,13 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
                     // Creazione foglio Excel
                     var worksheet = package.Workbook.Worksheets.Add(nomeFoglio);
 
-                    // Titolo: "Classe 1E - Informatica" su 4 colonne
-                    worksheet.Cells[1, 1, 1, 4].Merge = true;
+                    // Titolo: "Classe 1E" su 6 colonne
+                    worksheet.Cells[1, 1, 1, 6].Merge = true;
                     worksheet.Cells[1, 1].Value = $"Classe 1{sezione}";
                     worksheet.Cells[1, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
                     // Indirizzo su riga 2
-                    worksheet.Cells[2, 1, 2, 4].Merge = true;
+                    worksheet.Cells[2, 1, 2, 6].Merge = true;
                     worksheet.Cells[2, 1].Value = $"Indirizzo: {indirizzo}";
                     worksheet.Cells[2, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
@@ -64,19 +64,28 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
                     worksheet.Cells[4, 1].Value = "n";
                     worksheet.Cells[4, 2].Value = "Cognome";
                     worksheet.Cells[4, 3].Value = "Nome";
+                    worksheet.Cells[4, 4].Value = "Scelta Compagno";
+                    worksheet.Cells[4, 5].Value = "DSA";
+                    worksheet.Cells[4, 6].Value = "Disabilità";
 
                     // Allineamento numero
                     worksheet.Cells[4, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
 
-                    // Ordinamento alfabetico
+                    // Ordinamento alfabetico — manteniamo i dati extra per le nuove colonne
                     var studentiOrdinati = studenti
-                        .Select(s => (Cognome: s.Cognome, Nome: s.Nome))
+                        .Select(s => (
+                            Cognome: s.Cognome,
+                            Nome: s.Nome,
+                            SceltaCompagno: s.SceltaCompagno?.Testo,
+                            DSA: s.ProfiloBES.HasDSA,
+                            Disabilita: s.ProfiloBES.HasDisabilita
+                        ))
                         .OrderBy(s => s.Cognome)
                         .ThenBy(s => s.Nome)
                         .ToList();
 
                     // Font in grassetto per titolo, indirizzo e intestazioni
-                    using (var range = worksheet.Cells[1, 1, 4, 3])
+                    using (var range = worksheet.Cells[1, 1, 4, 6])
                         range.Style.Font.Bold = true;
 
                     // Inserimento dati a partire da riga 5
@@ -87,6 +96,18 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
                         worksheet.Cells[row, 1].Value = num;
                         worksheet.Cells[row, 2].Value = studente.Cognome;
                         worksheet.Cells[row, 3].Value = studente.Nome;
+
+                        // Colonna Scelta Compagno
+                        worksheet.Cells[row, 4].Value = !string.IsNullOrWhiteSpace(studente.SceltaCompagno)
+                            ? studente.SceltaCompagno
+                            : "-";
+
+                        // Colonna DSA
+                        worksheet.Cells[row, 5].Value = studente.DSA ? "Sì" : "No";
+
+                        // Colonna Disabilità
+                        worksheet.Cells[row, 6].Value = studente.Disabilita ? "Sì" : "No";
+
                         row++;
                         num++;
                     }
@@ -94,7 +115,7 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
                     worksheet.Cells.AutoFitColumns();
 
                     // Formattazione bordi (solo dalla riga delle intestazioni in poi)
-                    using (var range = worksheet.Cells[4, 1, row - 1, 3])
+                    using (var range = worksheet.Cells[4, 1, row - 1, 6])
                     {
                         range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
                         range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;

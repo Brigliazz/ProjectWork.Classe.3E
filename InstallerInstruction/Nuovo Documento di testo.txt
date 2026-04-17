@@ -1,0 +1,33 @@
+Generatore di Classi Prime - Project Work 3E
+Benvenuti nel software Generatore di Classi Prime, realizzato con impegno e passione dalla classe 3E del Polo Tecnico di Lugo, sotto la supervisione dei docenti David Veneti e Luca Pulga.
+
+Questo applicativo è stato progettato per semplificare e automatizzare la formazione delle classi prime, garantendo criteri di equità e velocità.
+
+⚠️ IMPORTANTE: Avvio del Software
+Per funzionare correttamente e poter salvare i dati nel database, il software deve essere eseguito come Amministratore.
+
+Come fare:
+
+Clicca con il tasto destro sull'icona del programma sul Desktop (o sul file .exe).
+
+Seleziona la voce "Esegui come amministratore".
+
+Clicca su "Sì" nella finestra di conferma di Windows.
+
+🚀 Istruzioni per l'uso
+Per ottenere una generazione corretta, segui questi semplici passaggi in ordine:
+
+Importa Excel: Clicca sul tasto per selezionare e caricare il file Excel contenente l'elenco degli alunni iscritti.
+
+Configura le Classi: Inserisci nel campo apposito il numero di classi che desideri creare.
+
+Carica Dati: Clicca sul tasto "Importa" per trasferire i dati dall'Excel al motore di calcolo.
+
+Generazione: Clicca sul tasto "Genera Classi".
+
+⏳ Nota sui tempi di elaborazione
+Il motore algoritmico analizza centinaia di combinazioni per trovare la migliore suddivisione possibile. Il processo è complesso e potrebbe richiedere dai 20 ai 30 secondi.
+Non chiudere il programma: una notifica ti avviserà non appena le classi saranno pronte!
+
+Grazie per aver scelto il software sviluppato dalla 3E!
+Team Sviluppo 3E - A.S. 2025/2026

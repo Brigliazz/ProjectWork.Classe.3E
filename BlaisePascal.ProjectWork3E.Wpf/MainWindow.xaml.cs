@@ -45,7 +45,7 @@ namespace BlaisePascal.ProjectWork3E.Wpf
             }
         }
 
-        private void BtnImport_Click(object sender, RoutedEventArgs e)
+        private async void BtnImport_Click(object sender, RoutedEventArgs e)
         {
             importedFilePath = TxtFilePath.Text;
 
@@ -70,19 +70,33 @@ namespace BlaisePascal.ProjectWork3E.Wpf
 
             try
             {
-                // 3. Elaborazione dei dati (ora sicura)
-                DatiImportatiDto.Alunni.Clear();
-                DatiImportatiDto.Scelte.Clear();
-                DatiImportatiDto.Scuole.Clear();
-                DatiImportatiDto.Genitori.Clear();
-                DatiImportatiDto.PreferenzeCompagni.Clear();
+                // Mostra la barra di caricamento e disabilita il pulsante
+                BtnImport.IsEnabled = false;
+                BtnImport.Content = "Importazione...";
+                ProgBar.Visibility = Visibility.Visible;
+                ProgBar.IsIndeterminate = true;
+                TxtStatus.Text = "Importazione file in corso...";
+                TxtStatus.Visibility = Visibility.Visible;
 
-                ImportazioneService.EstrapolaDati(importedFilePath);
+                // Salva il path locale per il background thread
+                string filePath = importedFilePath;
 
-                DatiImportatiDto.NumeroClassiInformatica = numeroClassiInformatica;
-                DatiImportatiDto.NumeroClassiAutomazione = numeroClassiElettronica;
-                DatiImportatiDto.NumeroClassiBiotecnologie = numeroClassiBiotecnologie;
-                DatabaseInitializer.Initialize();
+                await Task.Run(() =>
+                {
+                    // 3. Elaborazione dei dati (ora sicura)
+                    DatiImportatiDto.Alunni.Clear();
+                    DatiImportatiDto.Scelte.Clear();
+                    DatiImportatiDto.Scuole.Clear();
+                    DatiImportatiDto.Genitori.Clear();
+                    DatiImportatiDto.PreferenzeCompagni.Clear();
+
+                    ImportazioneService.EstrapolaDati(filePath);
+
+                    DatiImportatiDto.NumeroClassiInformatica = numeroClassiInformatica;
+                    DatiImportatiDto.NumeroClassiAutomazione = numeroClassiElettronica;
+                    DatiImportatiDto.NumeroClassiBiotecnologie = numeroClassiBiotecnologie;
+                    DatabaseInitializer.Initialize();
+                });
 
                 // Messaggio di successo
                 MessageBox.Show($"Importazione completata!\n\nTrovati {DatiImportatiDto.Alunni.Count} studenti nel file Excel.\nFile: {importedFilePath}\nClassi Informatica: {numeroClassiInformatica}\nClassi Elettronica: {numeroClassiElettronica}\nClassi Biotecnologie: {numeroClassiBiotecnologie}",
@@ -91,7 +105,15 @@ namespace BlaisePascal.ProjectWork3E.Wpf
             catch (Exception ex)
             {
                 MessageBox.Show($"Si è verificato un errore durante l'importazione del file Excel:\n\n{ex.Message}", "Errore Lettura File", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
+            }
+            finally
+            {
+                // Nascondi la barra di caricamento e riabilita il pulsante
+                BtnImport.IsEnabled = true;
+                BtnImport.Content = "Importa";
+                ProgBar.IsIndeterminate = false;
+                ProgBar.Visibility = Visibility.Collapsed;
+                TxtStatus.Visibility = Visibility.Collapsed;
             }
         }
 

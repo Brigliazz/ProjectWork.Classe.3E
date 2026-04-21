@@ -57,13 +57,15 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
                     // Creazione foglio Excel
                     var worksheet = package.Workbook.Worksheets.Add(nomeFoglio);
 
-                    // Titolo: "Classe 1E" su 6 colonne
-                    worksheet.Cells[1, 1, 1, 6].Merge = true;
+                    int totalColumns = 8; // n, Cognome, Nome, Sesso, Scelta Compagno, DSA, Disabilità, Indirizzo Preferito
+
+                    // Titolo: "Classe 1E" su tutte le colonne
+                    worksheet.Cells[1, 1, 1, totalColumns].Merge = true;
                     worksheet.Cells[1, 1].Value = $"Classe 1{sezione}";
                     worksheet.Cells[1, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
                     // Indirizzo su riga 2
-                    worksheet.Cells[2, 1, 2, 6].Merge = true;
+                    worksheet.Cells[2, 1, 2, totalColumns].Merge = true;
                     worksheet.Cells[2, 1].Value = $"Indirizzo: {indirizzo}";
                     worksheet.Cells[2, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
@@ -71,9 +73,11 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
                     worksheet.Cells[4, 1].Value = "n";
                     worksheet.Cells[4, 2].Value = "Cognome";
                     worksheet.Cells[4, 3].Value = "Nome";
-                    worksheet.Cells[4, 4].Value = "Scelta Compagno";
-                    worksheet.Cells[4, 5].Value = "DSA";
-                    worksheet.Cells[4, 6].Value = "Disabilità";
+                    worksheet.Cells[4, 4].Value = "Sesso";
+                    worksheet.Cells[4, 5].Value = "Scelta Compagno";
+                    worksheet.Cells[4, 6].Value = "DSA";
+                    worksheet.Cells[4, 7].Value = "Disabilità";
+                    worksheet.Cells[4, 8].Value = "Indirizzo Preferito";
 
                     // Allineamento numero
                     worksheet.Cells[4, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
@@ -83,16 +87,18 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
                         .Select(s => (
                             Cognome: s.Cognome,
                             Nome: s.Nome,
+                            Sesso: s.Sesso,
                             SceltaCompagno: s.SceltaCompagno?.Testo,
                             DSA: s.ProfiloBES.HasDSA,
-                            Disabilita: s.ProfiloBES.HasDisabilita
+                            Disabilita: s.ProfiloBES.HasDisabilita,
+                            IndirizzoPreferito: s.IndirizzoPreferito
                         ))
                         .OrderBy(s => s.Cognome)
                         .ThenBy(s => s.Nome)
                         .ToList();
 
                     // Font in grassetto per titolo, indirizzo e intestazioni
-                    using (var range = worksheet.Cells[1, 1, 4, 6])
+                    using (var range = worksheet.Cells[1, 1, 4, totalColumns])
                         range.Style.Font.Bold = true;
 
                     // Inserimento dati a partire da riga 5
@@ -104,16 +110,53 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
                         worksheet.Cells[row, 2].Value = studente.Cognome;
                         worksheet.Cells[row, 3].Value = studente.Nome;
 
+                        // Colonna Sesso
+                        worksheet.Cells[row, 4].Value = studente.Sesso == BlaisePascal.ProjectWork._3E.Domain.Enums.Sesso.Maschio ? "M" : "F";
+
                         // Colonna Scelta Compagno
-                        worksheet.Cells[row, 4].Value = !string.IsNullOrWhiteSpace(studente.SceltaCompagno)
+                        worksheet.Cells[row, 5].Value = !string.IsNullOrWhiteSpace(studente.SceltaCompagno)
                             ? studente.SceltaCompagno
                             : "-";
 
                         // Colonna DSA
-                        worksheet.Cells[row, 5].Value = studente.DSA ? "Sì" : "No";
+                        worksheet.Cells[row, 6].Value = studente.DSA ? "Sì" : "No";
 
                         // Colonna Disabilità
-                        worksheet.Cells[row, 6].Value = studente.Disabilita ? "Sì" : "No";
+                        worksheet.Cells[row, 7].Value = studente.Disabilita ? "Sì" : "No";
+
+                        // Colonna Indirizzo Preferito
+                        worksheet.Cells[row, 8].Value = !string.IsNullOrWhiteSpace(studente.IndirizzoPreferito)
+                            ? studente.IndirizzoPreferito
+                            : "-";
+
+                        // COLORAZIONE RIGHE (priorità: Disabilità > DSA > Femmina)
+                        // Giallo per disabili
+                        if (studente.Disabilita)
+                        {
+                            using (var rowRange = worksheet.Cells[row, 1, row, totalColumns])
+                            {
+                                rowRange.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                                rowRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(255, 255, 224)); // Giallo chiaro
+                            }
+                        }
+                        // Verde per DSA
+                        else if (studente.DSA)
+                        {
+                            using (var rowRange = worksheet.Cells[row, 1, row, totalColumns])
+                            {
+                                rowRange.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                                rowRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(200, 255, 200)); // Verde chiaro
+                            }
+                        }
+                        // Rosa chiaro per ragazze
+                        else if (studente.Sesso == BlaisePascal.ProjectWork._3E.Domain.Enums.Sesso.Femmina)
+                        {
+                            using (var rowRange = worksheet.Cells[row, 1, row, totalColumns])
+                            {
+                                rowRange.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                                rowRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(255, 228, 225)); // Rosa chiaro (MistyRose)
+                            }
+                        }
 
                         row++;
                         num++;
@@ -122,7 +165,7 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
                     worksheet.Cells.AutoFitColumns();
 
                     // Formattazione bordi (solo dalla riga delle intestazioni in poi)
-                    using (var range = worksheet.Cells[4, 1, row - 1, 6])
+                    using (var range = worksheet.Cells[4, 1, row - 1, totalColumns])
                     {
                         range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
                         range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;

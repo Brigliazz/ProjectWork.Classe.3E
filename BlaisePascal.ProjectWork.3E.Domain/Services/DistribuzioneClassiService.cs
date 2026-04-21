@@ -213,6 +213,34 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
                     Enumerable.Range(0, m).Select(j => (ILiteral)x[i, j]).ToArray());
 
 
+            // Identifica gli indici delle classi Bio e degli studenti Bio
+            var bioClassiIdx = Enumerable.Range(0, m)
+                .Where(j => string.Equals(classi[j].Indirizzo.Nome, "Bio", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            var bioStudentiIdx = IndiciStudenti(studenti, s =>
+                string.Equals(s.IndirizzoPreferito, "Bio", StringComparison.OrdinalIgnoreCase));
+
+            // VINCOLO HARD BIO: gli studenti che scelgono Bio vanno TUTTI nelle classi Bio,
+            // ignorando ogni altro limite (capienza, stranieri, disabili, ecc.).
+            // Inoltre, gli studenti NON-Bio non possono finire in classi Bio.
+            foreach (int i in bioStudentiIdx)
+            {
+                // Lo studente Bio può andare SOLO in classi Bio
+                for (int j = 0; j < m; j++)
+                {
+                    if (!bioClassiIdx.Contains(j))
+                        model.Add(x[i, j] == 0);
+                }
+            }
+            // Gli studenti NON-Bio non possono andare in classi Bio
+            for (int i = 0; i < n; i++)
+            {
+                if (bioStudentiIdx.Contains(i)) continue;
+                foreach (int j in bioClassiIdx)
+                    model.Add(x[i, j] == 0);
+            }
+
+
             // Identifica gli indici degli studenti che appartengono a categorie specifiche
             // Queste liste verranno usate per definire i vincoli di bilanciamento.
             var disabiliIdx  = IndiciStudenti(studenti, s => s.ProfiloBES.HasDisabilita);
@@ -227,11 +255,15 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             // 1. Ogni classe può avere al massimo 1 disabile (per ottimizzare l'integrazione).
             // 2. Se una classe ha un disabile, la sua capienza massima scende a 20 studenti.
             // 3. Altrimenti, la capienza standard è 27 (a meno di sforo permesso dalle opzioni).
+            // NOTA: Le classi Bio sono escluse da questi vincoli (gli studenti Bio ignorano i limiti).
             
             int delta = opzioni.LimiteStandard - opzioni.LimiteDisabili; // Solitamente 27 - 20 = 7
 
             for (int j = 0; j < m; j++)
             {
+                // Le classi Bio non hanno limiti di capienza né vincoli sui disabili
+                if (bioClassiIdx.Contains(j)) continue;
+
                 if (disabiliIdx.Count > 0)
                 {
                     var disInClass = disabiliIdx.Select(i => (IntVar)x[i, j]).ToArray();
@@ -275,13 +307,17 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             // VINCOLO SULLA PERCENTUALE DI STRANIERI:
             // Per regolamento, gli stranieri non dovrebbero superare il 30% degli alunni per classe.
             // Poiché CP-SAT lavora con interi, calcoliamo una soglia numerica basata sulla media attesa.
+            // NOTA: Le classi Bio sono escluse da questo vincolo.
             if (stranieriIdx.Count > 0 && !opzioni.ConsentiSforo)
             {
                 int attesoPerClasse = (int)Math.Ceiling((double)n / m);
                 int maxStranieri    = Math.Max(1, (int)Math.Floor(0.30 * attesoPerClasse));
 
                 for (int j = 0; j < m; j++)
+                {
+                    if (bioClassiIdx.Contains(j)) continue; // Bio escluse dal limite stranieri
                     model.Add(LinearExpr.Sum(stranieriIdx.Select(i => (IntVar)x[i, j]).ToArray()) <= maxStranieri);
+                }
             }
 
 
@@ -358,12 +394,14 @@ namespace BlaisePascal.ProjectWork._3E.Domain.Services
             }
 
 
-            // GESTIONE INDIRIZZO PREFERITO:
-            // Per ogni studente che ha un IndirizzoPreferito espresso, 
+            // GESTIONE INDIRIZZO PREFERITO (solo per Informatica/Automazione):
+            // Per ogni studente che ha un IndirizzoPreferito espresso (escluso Bio, già gestito come vincolo hard), 
             // penalizziamo fortemente (+1000) l'assegnazione a una classe con indirizzo diverso.
             for (int i = 0; i < n; i++)
             {
                 if (studenti[i].IndirizzoPreferito == null) continue;
+                // Bio è già gestito come vincolo hard, non serve la penalità soft
+                if (string.Equals(studenti[i].IndirizzoPreferito, "Bio", StringComparison.OrdinalIgnoreCase)) continue;
 
                 for (int j = 0; j < m; j++)
                 {

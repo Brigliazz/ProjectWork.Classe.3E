@@ -195,7 +195,11 @@ namespace BlaisePascal.ProjectWork3E.Wpf
 
                     // Esporta Excel (usa i risultati già calcolati)
                     var esportazioneExcel = new BlaisePascal.ProjectWork._3E.Application.ExportModels.EsportazioneDatiExcel(service);
-                    esportazioneExcel.Esporta(risultati);
+                    var scuoleLookup = DatiImportatiDto.Scuole
+                        .Where(s => !string.IsNullOrWhiteSpace(s.CodiceScuola))
+                        .GroupBy(s => s.CodiceScuola)
+                        .ToDictionary(g => g.Key, g => g.First().DenominazioneScuola ?? g.Key);
+                    esportazioneExcel.Esporta(risultati, scuoleLookup);
 
                     // Esporta PDF (usa i risultati già calcolati)
                     var esportazionePdf = new BlaisePascal.ProjectWork._3E.Application.ExportModels.EsportazioneDatiPDF();

@@ -26,10 +26,10 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
             Esporta(risultati);
         }
 
-        /// <summary>
-        /// Esporta da risultati già distribuiti (senza richiamare la distribuzione).
-        /// </summary>
-        public void Esporta(List<(BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima.ClassePrima Classe, List<BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.Studente> Studenti)> risultati)
+        // Esporta da risultati già distribuiti (senza richiamare la distribuzione).
+
+        public void Esporta(List<(BlaisePascal.ProjectWork._3E.Domain.Aggregates.ClassePrima.ClassePrima Classe, List<BlaisePascal.ProjectWork._3E.Domain.Aggregates.Studente.Studente> Studenti)> risultati,
+            Dictionary<string, string>? scuoleLookup = null)
         {
             // Licenza gratuita EPPlus
             ExcelPackage.License.SetNonCommercialOrganization("<Your Noncommercial Organization>");
@@ -57,7 +57,7 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
                     // Creazione foglio Excel
                     var worksheet = package.Workbook.Worksheets.Add(nomeFoglio);
 
-                    int totalColumns = 8; // n, Cognome, Nome, Sesso, Scelta Compagno, DSA, Disabilità, Indirizzo Preferito
+                    int totalColumns = 9; // n, Cognome, Nome, Sesso, Scelta Compagno, DSA, Disabilità, Indirizzo Preferito, Scuola di Provenienza
 
                     // Titolo: "Classe 1E" su tutte le colonne
                     worksheet.Cells[1, 1, 1, totalColumns].Merge = true;
@@ -78,6 +78,7 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
                     worksheet.Cells[4, 6].Value = "DSA";
                     worksheet.Cells[4, 7].Value = "Disabilità";
                     worksheet.Cells[4, 8].Value = "Indirizzo Preferito";
+                    worksheet.Cells[4, 9].Value = "Scuola di Provenienza";
 
                     // Allineamento numero
                     worksheet.Cells[4, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
@@ -91,7 +92,8 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
                             SceltaCompagno: s.SceltaCompagno?.Testo,
                             DSA: s.ProfiloBES.HasDSA,
                             Disabilita: s.ProfiloBES.HasDisabilita,
-                            IndirizzoPreferito: s.IndirizzoPreferito
+                            IndirizzoPreferito: s.IndirizzoPreferito,
+                            NomeScuola: (scuoleLookup != null && scuoleLookup.TryGetValue(s.CodiceScuolaProvenienza ?? "", out var ns)) ? ns : s.CodiceScuolaProvenienza ?? "-"
                         ))
                         .OrderBy(s => s.Cognome)
                         .ThenBy(s => s.Nome)
@@ -128,6 +130,9 @@ namespace BlaisePascal.ProjectWork._3E.Application.ExportModels
                         worksheet.Cells[row, 8].Value = !string.IsNullOrWhiteSpace(studente.IndirizzoPreferito)
                             ? studente.IndirizzoPreferito
                             : "-";
+
+                        // Colonna Scuola di Provenienza
+                        worksheet.Cells[row, 9].Value = studente.NomeScuola;
 
                         // COLORAZIONE RIGHE (priorità: Disabilità > DSA > Femmina)
                         // Giallo per disabili
